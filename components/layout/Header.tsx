@@ -79,7 +79,7 @@ export const Header: React.FC = () => {
                       {user.avatar || user.fullname.charAt(0).toUpperCase()}
                     </div>
                     <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'currentColor', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {user.fullname}
+                      {user.fullname.trim().split(/\s+/).pop() || user.fullname}
                     </span>
                   </div>
                 ) : (
@@ -175,7 +175,7 @@ export const Header: React.FC = () => {
               <Link href="/wishlist">Yêu Thích ({wishlistCount})</Link>
               {user ? (
                 <button onClick={() => logout()} style={{ color: '#ef4444', textAlign: 'left', background: 'none', border: 'none', fontWeight: 700, padding: 0 }}>
-                  Đăng Xuất ({user.fullname})
+                  Đăng Xuất ({user.fullname.trim().split(/\s+/).pop() || user.fullname})
                 </button>
               ) : (
                 <Link href="/login">Đăng Nhập / Đăng Ký</Link>
