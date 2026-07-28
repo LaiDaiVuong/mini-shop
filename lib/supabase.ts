@@ -88,15 +88,9 @@ export async function fetchProductByIdFromSupabase(id: string): Promise<Product>
 }
 
 export async function saveProductToSupabase(product: Product, isEditing: boolean) {
-  // Prevent huge Base64 strings from exceeding browser localStorage 5MB quota
-  let safeImg = product.img || '/assets/img/products/S.T Dupont/Lacquered lighter cohiba 60 black.webp';
-  if (safeImg.startsWith('data:image/') && safeImg.length > 150000) {
-    safeImg = '/assets/img/products/S.T Dupont/Lacquered lighter cohiba 60 black.webp';
-  }
-
   const cleanProd: Product = {
     ...product,
-    img: safeImg
+    img: product.img || '/assets/img/products/S.T Dupont/Lacquered lighter cohiba 60 black.webp'
   };
 
   try {

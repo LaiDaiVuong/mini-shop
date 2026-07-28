@@ -86,9 +86,41 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        if (event.target?.result) {
-          setImg(event.target.result as string);
-        }
+        const rawDataUrl = event.target?.result as string;
+        if (!rawDataUrl) return;
+
+        // Auto compress image using Canvas to 600px max dimension
+        const imgObj = new Image();
+        imgObj.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxDim = 600;
+          let width = imgObj.width;
+          let height = imgObj.height;
+
+          if (width > height) {
+            if (width > maxDim) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(imgObj, 0, 0, width, height);
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+            setImg(compressedBase64);
+          } else {
+            setImg(rawDataUrl);
+          }
+        };
+        imgObj.src = rawDataUrl;
       };
       reader.readAsDataURL(file);
     }
