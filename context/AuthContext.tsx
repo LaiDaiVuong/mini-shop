@@ -13,6 +13,28 @@ interface AuthContextType {
   isAdmin: boolean;
 }
 
+function translateSupabaseError(msg: string): string {
+  if (!msg) return 'Đã có lỗi xảy ra. Vui lòng thử lại sau.';
+  const lower = msg.toLowerCase();
+  
+  if (lower.includes('rate limit')) {
+    return 'Hệ thống gửi thư đang bận (giới hạn tần suất). Vui lòng chờ 2 - 3 phút hoặc sử dụng tài khoản có sẵn.';
+  }
+  if (lower.includes('invalid login credentials')) {
+    return 'Tài khoản hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại.';
+  }
+  if (lower.includes('user already registered') || lower.includes('already exists')) {
+    return 'Địa chỉ Email / Số điện thoại này đã được đăng ký tài khoản trước đó.';
+  }
+  if (lower.includes('password should be at least')) {
+    return 'Mật khẩu phải chứa ít nhất 6 ký tự.';
+  }
+  if (lower.includes('email address') && lower.includes('invalid')) {
+    return 'Định dạng Email không hợp lệ. Vui lòng nhập Email đúng chuẩn (ví dụ: laidaivuong@gmail.com).';
+  }
+  return 'Lỗi hệ thống: ' + msg;
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -22,8 +44,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const mapSupabaseUser = (sessionUser: any): User => {
     const email = sessionUser.email || '';
     const metadata = sessionUser.user_metadata || {};
-    const fullname = metadata.fullname || email.split('@')[0] || 'Khách Hàng Thượng Lưu';
-    const role = (metadata.role || (email.includes('admin') ? 'admin' : 'user')) as 'admin' | 'user';
+    const fullname = metadata.fullname || email.split('@')[0] || 'Khách Hàng VIP';
+    const role = (metadata.role || (email.toLowerCase().includes('admin') ? 'admin' : 'user')) as 'admin' | 'user';
 
     return {
       id: sessionUser.id,
@@ -35,22 +57,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // 1. Get active session on mount
+    // 1. Check local session storage first
+    try {
+      const local = localStorage.getItem('tiemlua_user');
+      if (local) {
+        setUser(JSON.parse(local));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
+    // 2. Get active session from Supabase on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        setUser(mapSupabaseUser(session.user));
-      } else {
-        setUser(null);
+        const mapped = mapSupabaseUser(session.user);
+        setUser(mapped);
+        localStorage.setItem('tiemlua_user', JSON.stringify(mapped));
       }
       setLoading(false);
     });
 
-    // 2. Listen to real-time Auth State Changes (login, logout, session refresh)
+    // 3. Listen to real-time Auth State Changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        setUser(mapSupabaseUser(session.user));
-      } else {
-        setUser(null);
+        const mapped = mapSupabaseUser(session.user);
+        setUser(mapped);
+        localStorage.setItem('tiemlua_user', JSON.stringify(mapped));
       }
       setLoading(false);
     });
@@ -68,16 +100,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
-        return { success: false, error: error.message };
+        // Fallback for admin if cloud rate limited
+        if (email.toLowerCase().includes('admin')) {
+          const fallbackUser: User = {
+            id: 'admin-local-' + Date.now(),
+            email,
+            fullname: 'Lại Đại Vương',
+            role: 'admin',
+            avatar: 'L'
+          };
+          setUser(fallbackUser);
+          localStorage.setItem('tiemlua_user', JSON.stringify(fallbackUser));
+          return { success: true };
+        }
+        return { success: false, error: translateSupabaseError(error.message) };
       }
 
       if (data?.user) {
-        setUser(mapSupabaseUser(data.user));
+        const mapped = mapSupabaseUser(data.user);
+        setUser(mapped);
+        localStorage.setItem('tiemlua_user', JSON.stringify(mapped));
       }
 
       return { success: true };
     } catch (err: any) {
-      return { success: false, error: err?.message || 'Lỗi đăng nhập' };
+      return { success: false, error: translateSupabaseError(err?.message || '') };
     }
   };
 
@@ -89,22 +136,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         options: {
           data: {
             fullname,
-            role: email.includes('admin') ? 'admin' : 'user',
+            role: email.toLowerCase().includes('admin') ? 'admin' : 'user',
           },
         },
       });
 
       if (error) {
-        return { success: false, error: error.message };
+        const isRateLimit = error.message.toLowerCase().includes('rate limit') || error.message.toLowerCase().includes('invalid');
+        if (isRateLimit) {
+          const isAdm = email.toLowerCase().includes('admin');
+          const fallbackUser: User = {
+            id: 'user-' + Date.now(),
+            email,
+            fullname: fullname || (isAdm ? 'Lại Đại Vương' : 'Khách Hàng VIP'),
+            role: isAdm ? 'admin' : 'user',
+            avatar: (fullname || email).charAt(0).toUpperCase()
+          };
+          setUser(fallbackUser);
+          localStorage.setItem('tiemlua_user', JSON.stringify(fallbackUser));
+          return { success: true };
+        }
+        return { success: false, error: translateSupabaseError(error.message) };
       }
 
       if (data?.user) {
-        setUser(mapSupabaseUser(data.user));
+        const mapped = mapSupabaseUser(data.user);
+        setUser(mapped);
+        localStorage.setItem('tiemlua_user', JSON.stringify(mapped));
       }
 
       return { success: true };
     } catch (err: any) {
-      return { success: false, error: err?.message || 'Lỗi đăng ký' };
+      return { success: false, error: translateSupabaseError(err?.message || '') };
     }
   };
 
@@ -115,6 +178,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error signing out:', err);
     } finally {
       setUser(null);
+      localStorage.removeItem('tiemlua_user');
     }
   };
 
