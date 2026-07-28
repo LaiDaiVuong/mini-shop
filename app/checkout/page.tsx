@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import { formatCurrencyVND } from '@/lib/products-data';
+import { createOrderInSupabase } from '@/lib/supabase';
 import { Order } from '@/lib/types';
 
 export default function CheckoutPage() {
@@ -20,6 +21,7 @@ export default function CheckoutPage() {
   const [orderCode, setOrderCode] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const rand = Math.floor(100000 + Math.random() * 900000);
@@ -35,12 +37,15 @@ export default function CheckoutPage() {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!custName || !custPhone || !custAddress) {
       alert('Vui lòng điền đầy đủ Họ tên, Số điện thoại và Địa chỉ giao hàng!');
       return;
     }
+
+    setIsSubmitting(true);
+    const fullAddress = `${custAddress}, ${custDistrict}, ${custCity}`;
 
     const newOrder: Order = {
       id: orderCode,
@@ -61,6 +66,24 @@ export default function CheckoutPage() {
       status: 'pending'
     };
 
+    // Save directly to Supabase DB (orders & order_items tables)
+    await createOrderInSupabase({
+      id: orderCode,
+      customer_name: custName,
+      customer_phone: custPhone,
+      customer_address: fullAddress,
+      payment_method: paymentMethod,
+      total_amount: cartSubtotal,
+      note: custNote,
+      items: cart.map(item => ({
+        id: item.id,
+        name: item.name,
+        quantity: item.quantity,
+        priceNum: item.priceNum
+      }))
+    });
+
+    // Backup to localStorage for client offline fallback
     try {
       const local = localStorage.getItem('tiemlua_orders');
       const existing = local ? JSON.parse(local) : [];
@@ -71,6 +94,7 @@ export default function CheckoutPage() {
 
     setCompletedOrder(newOrder);
     setIsModalOpen(true);
+    setIsSubmitting(false);
     clearCart();
   };
 
@@ -323,9 +347,10 @@ export default function CheckoutPage() {
                     <button 
                       type="submit" 
                       className="btn-checkout-primary" 
-                      style={{ width: '100%', padding: 16, fontSize: '0.875rem', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', background: 'var(--color-accent)', border: 'none', borderRadius: 'var(--radius-sm)', color: '#fff', cursor: 'pointer' }}
+                      disabled={isSubmitting}
+                      style={{ width: '100%', padding: 16, fontSize: '0.875rem', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', background: 'var(--color-accent)', border: 'none', borderRadius: 'var(--radius-sm)', color: '#fff', cursor: isSubmitting ? 'not-allowed' : 'pointer', opacity: isSubmitting ? 0.7 : 1 }}
                     >
-                      XÁC NHẬN ĐẶT HÀNG
+                      {isSubmitting ? 'ĐANG GHI ĐƠN HÀNG...' : 'XÁC NHẬN ĐẶT HÀNG'}
                     </button>
 
                     <div style={{ marginTop: 16, textAlign: 'center', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
@@ -351,7 +376,7 @@ export default function CheckoutPage() {
             ĐẶT HÀNG THÀNH CÔNG!
           </h2>
           <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', marginBottom: 20 }}>
-            Cảm ơn bạn đã lựa chọn tuyệt tác tại <strong>Tiệm Lửa</strong>. Mã đơn hàng của bạn là:
+            Cảm ơn bạn đã lựa chọn tuyệt tác tại <strong>Tiệm Lửa</strong>. Đơn hàng đã được lưu vào hệ thống:
           </p>
 
           <div style={{ background: '#f8fafc', border: '1px dashed var(--color-accent)', padding: 12, borderRadius: 6, marginBottom: 20 }}>

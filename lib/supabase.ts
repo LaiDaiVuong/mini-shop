@@ -59,3 +59,59 @@ export async function fetchProductByIdFromSupabase(id: string): Promise<Product>
     return INITIAL_PRODUCTS_DATA.find(p => p.id === id) || INITIAL_PRODUCTS_DATA[0];
   }
 }
+
+export async function createOrderInSupabase(orderData: {
+  id: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_address: string;
+  payment_method: string;
+  total_amount: number;
+  note: string;
+  items: Array<{
+    id: string;
+    name: string;
+    quantity: number;
+    priceNum: number;
+  }>;
+}) {
+  try {
+    // 1. Insert into orders table
+    const { error: orderErr } = await supabase.from('orders').insert({
+      id: orderData.id,
+      customer_name: orderData.customer_name,
+      customer_phone: orderData.customer_phone,
+      customer_address: orderData.customer_address,
+      payment_method: orderData.payment_method,
+      total_amount: orderData.total_amount,
+      note: orderData.note,
+      status: 'pending',
+    });
+
+    if (orderErr) {
+      console.error('Error inserting order into Supabase:', orderErr);
+    }
+
+    // 2. Insert into order_items table
+    if (orderData.items && orderData.items.length > 0) {
+      const orderItems = orderData.items.map(item => ({
+        order_id: orderData.id,
+        product_id: item.id,
+        product_name: item.name,
+        quantity: item.quantity,
+        price: item.priceNum,
+        subtotal: item.priceNum * item.quantity,
+      }));
+
+      const { error: itemsErr } = await supabase.from('order_items').insert(orderItems);
+      if (itemsErr) {
+        console.error('Error inserting order items into Supabase:', itemsErr);
+      }
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error('Supabase createOrder error:', err);
+    return { success: false, error: err };
+  }
+}
