@@ -1,19 +1,72 @@
-import React from 'react';
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { INITIAL_PRODUCTS_DATA } from '@/lib/products-data';
+import { fetchProductsFromSupabase } from '@/lib/supabase';
+import { Product } from '@/lib/types';
 import { ProductCard } from '@/components/product/ProductCard';
 
 export default function HomePage() {
-  const featuredProducts = INITIAL_PRODUCTS_DATA.slice(0, 4);
+  const [isVideoReady, setIsVideoReady] = useState(false);
+  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS_DATA);
+
+  useEffect(() => {
+    fetchProductsFromSupabase().then((data) => {
+      if (data && data.length > 0) setProducts(data);
+    });
+  }, []);
+
+  const featuredProducts = products.slice(0, 4);
 
   return (
     <>
-      {/* Hero Banner Section (Original Exact Match) */}
-      <section className="hero-section">
-        <div className="hero-bg-container">
-          <img src="/assets/img/banner/banner.png" alt="Tiệm Lửa Luxury Banner" className="hero-bg-img" />
+      {/* Hero Banner Section with Auto-Switch Video Background (Homepage Only) */}
+      <section className="hero-section" style={{ position: 'relative', overflow: 'hidden' }}>
+        <div className="hero-bg-container" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+          {/* Static fallback image (Loads immediately when opening page) */}
+          <img 
+            src="/assets/img/banner/banner.png" 
+            alt="Tiệm Lửa Luxury Banner" 
+            className="hero-bg-img" 
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              opacity: isVideoReady ? 0 : 1,
+              transition: 'opacity 1s ease',
+              transform: 'none',
+              zIndex: 1,
+            }}
+          />
+
+          {/* Video Banner (Plays automatically once ready) */}
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            onCanPlay={() => setIsVideoReady(true)}
+            onLoadedData={() => setIsVideoReady(true)}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              opacity: isVideoReady ? 1 : 0,
+              transition: 'opacity 1s ease',
+              transform: 'none',
+              zIndex: 2,
+            }}
+          >
+            <source src="/assets/vid/videos_banner.mp4" type="video/mp4" />
+          </video>
         </div>
-        <div className="hero-overlay">
+
+        <div className="hero-overlay" style={{ zIndex: 3 }}>
           <div className="container">
             <div className="hero-content">
               <span className="hero-subtitle">BỘ SƯU TẬP LUXURY 2026</span>

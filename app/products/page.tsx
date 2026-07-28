@@ -1,17 +1,26 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { INITIAL_PRODUCTS_DATA } from '@/lib/products-data';
+import { fetchProductsFromSupabase } from '@/lib/supabase';
+import { Product } from '@/lib/types';
 import { ProductCard } from '@/components/product/ProductCard';
 
 export default function ProductsPage() {
+  const [productsList, setProductsList] = useState<Product[]>(INITIAL_PRODUCTS_DATA);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [priceRange, setPriceRange] = useState('all');
   const [sortOption, setSortOption] = useState('newest');
 
-  let filtered = [...INITIAL_PRODUCTS_DATA];
+  useEffect(() => {
+    fetchProductsFromSupabase().then((data) => {
+      if (data && data.length > 0) setProductsList(data);
+    });
+  }, []);
+
+  let filtered = [...productsList];
 
   if (selectedCategory !== 'all') {
     filtered = filtered.filter(p => p.category === selectedCategory || (selectedCategory === 'dupont-hk' && p.category === 'dupont-hongkong'));
@@ -64,11 +73,11 @@ export default function ProductsPage() {
                 </h3>
                 <ul className="filter-list">
                   {[
-                    { id: 'all', label: 'Tất Cả Sản Phẩm', count: INITIAL_PRODUCTS_DATA.length },
-                    { id: 'st-dupont', label: 'S.T. Dupont France', count: INITIAL_PRODUCTS_DATA.filter(p => p.category === 'st-dupont').length },
-                    { id: 'dupont-hk', label: 'Dupont Hongkong', count: INITIAL_PRODUCTS_DATA.filter(p => p.category === 'dupont-hk' || p.category === 'dupont-hongkong').length },
-                    { id: 'rowenta', label: 'Rowenta R10', count: INITIAL_PRODUCTS_DATA.filter(p => p.category === 'rowenta').length },
-                    { id: 'phu-kien', label: 'Phụ Kiện Lửa', count: INITIAL_PRODUCTS_DATA.filter(p => p.category === 'phu-kien').length },
+                    { id: 'all', label: 'Tất Cả Sản Phẩm', count: productsList.length },
+                    { id: 'st-dupont', label: 'S.T. Dupont France', count: productsList.filter(p => p.category === 'st-dupont').length },
+                    { id: 'dupont-hk', label: 'Dupont Hongkong', count: productsList.filter(p => p.category === 'dupont-hk' || p.category === 'dupont-hongkong').length },
+                    { id: 'rowenta', label: 'Rowenta R10', count: productsList.filter(p => p.category === 'rowenta').length },
+                    { id: 'phu-kien', label: 'Phụ Kiện Lửa', count: productsList.filter(p => p.category === 'phu-kien').length },
                   ].map(cat => (
                     <li key={cat.id}>
                       <button 
@@ -126,7 +135,7 @@ export default function ProductsPage() {
               {/* Top Bar Controls */}
               <div className="products-top-bar">
                 <div className="products-result-count">
-                  Hiển thị <strong>{filtered.length}</strong> trên <strong>{INITIAL_PRODUCTS_DATA.length}</strong> sản phẩm
+                  Hiển thị <strong>{filtered.length}</strong> trên <strong>{productsList.length}</strong> sản phẩm
                 </div>
 
                 <div className="products-controls-right">

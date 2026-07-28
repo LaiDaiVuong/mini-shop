@@ -3,7 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { INITIAL_PRODUCTS_DATA, formatCurrencyVND } from '@/lib/products-data';
+import { INITIAL_PRODUCTS_DATA } from '@/lib/products-data';
+import { fetchProductByIdFromSupabase } from '@/lib/supabase';
+import { Product } from '@/lib/types';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 
@@ -14,19 +16,24 @@ export default function ProductDetailPage() {
   const { toggleWishlist, isInWishlist } = useWishlist();
 
   const id = params?.id as string;
-  const product = INITIAL_PRODUCTS_DATA.find(p => p.id === id) || INITIAL_PRODUCTS_DATA[0];
+  const initialProduct = INITIAL_PRODUCTS_DATA.find(p => p.id === id) || INITIAL_PRODUCTS_DATA[0];
 
+  const [product, setProduct] = useState<Product>(initialProduct);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<'desc' | 'specs' | 'guide' | 'reviews'>('desc');
   const [activeThumbMode, setActiveThumbMode] = useState<string>('full');
-  const [selectedImgSrc, setSelectedImgSrc] = useState<string>(product.img);
+  const [selectedImgSrc, setSelectedImgSrc] = useState<string>(initialProduct.img);
 
   useEffect(() => {
-    if (product) {
-      setSelectedImgSrc(product.img);
-      setActiveThumbMode('full');
+    if (id) {
+      fetchProductByIdFromSupabase(id).then(data => {
+        if (data) {
+          setProduct(data);
+          setSelectedImgSrc(data.img);
+        }
+      });
     }
-  }, [product]);
+  }, [id]);
 
   const handleBuyNow = () => {
     addToCart(product, quantity);

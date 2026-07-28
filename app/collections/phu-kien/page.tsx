@@ -1,34 +1,35 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { INITIAL_PRODUCTS_DATA } from '@/lib/products-data';
+import { fetchProductsFromSupabase } from '@/lib/supabase';
+import { Product } from '@/lib/types';
 import { ProductCard } from '@/components/product/ProductCard';
 
 export default function PhuKienCollectionPage() {
-  const [search, setSearch] = useState('');
-  const [sortOption, setSortOption] = useState('default');
+  const [productsList, setProductsList] = useState<Product[]>(
+    INITIAL_PRODUCTS_DATA.filter(p => p.category === 'phu-kien')
+  );
 
-  let filtered = INITIAL_PRODUCTS_DATA.filter(p => p.category === 'phu-kien');
-
-  if (search.trim()) {
-    const q = search.toLowerCase().trim();
-    filtered = filtered.filter(p => p.name.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q));
-  }
-
-  if (sortOption === 'price-asc') filtered.sort((a, b) => a.priceNum - b.priceNum);
-  if (sortOption === 'price-desc') filtered.sort((a, b) => b.priceNum - a.priceNum);
-  if (sortOption === 'name-asc') filtered.sort((a, b) => a.name.localeCompare(b.name));
+  useEffect(() => {
+    fetchProductsFromSupabase().then(data => {
+      if (data && data.length > 0) {
+        setProductsList(data.filter(p => p.category === 'phu-kien'));
+      }
+    });
+  }, []);
 
   return (
     <>
+      {/* Collection Hero Section */}
       <section className="collection-hero">
         <div className="container">
           <div className="breadcrumb" style={{ marginBottom: 16 }}>
             <Link href="/" style={{ color: '#f1f5f9' }}>Trang Chủ</Link>
-            <span style={{ color: '#cbd5e1', margin: '0 8px' }}>&rsaquo;</span>
-            <Link href="/products" style={{ color: '#f1f5f9' }}>Bộ Sưu Tập</Link>
-            <span style={{ color: '#cbd5e1', margin: '0 8px' }}>&rsaquo;</span>
+            <span style={{ color: 'rgba(255,255,255,0.4)' }}>&rsaquo;</span>
+            <Link href="/products" style={{ color: '#f1f5f9' }}>Sản Phẩm</Link>
+            <span style={{ color: 'rgba(255,255,255,0.4)' }}>&rsaquo;</span>
             <span style={{ color: '#bae6fd', fontWeight: 700 }}>Phụ Kiện Lửa</span>
           </div>
 
@@ -46,36 +47,17 @@ export default function PhuKienCollectionPage() {
         </div>
       </section>
 
-      <section style={{ padding: '40px 0 70px', background: '#fafafa' }}>
+      {/* Main Collection Grid */}
+      <section className="products-page-section" style={{ padding: '60px 0 90px', background: 'var(--color-bg-secondary)' }}>
         <div className="container">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, marginBottom: 24, padding: '16px 20px', background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0' }}>
-            <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--color-text-main)' }}>
-              Danh sách Phụ Kiện Lửa ({filtered.length})
-            </div>
-
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              <input 
-                type="text" 
-                placeholder="Tìm phụ kiện gas, đá lửa, bao da..." 
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                style={{ padding: '10px 16px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: '0.9rem', width: 280 }}
-              />
-              <select 
-                value={sortOption}
-                onChange={(e) => setSortOption(e.target.value)}
-                style={{ padding: '10px 16px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: '0.9rem', background: '#fff', cursor: 'pointer' }}
-              >
-                <option value="default">Sắp xếp: Mới Nhất</option>
-                <option value="price-asc">Giá: Thấp đến Cao</option>
-                <option value="price-desc">Giá: Cao đến Thấp</option>
-                <option value="name-asc">Tên: A - Z</option>
-              </select>
+          <div className="products-top-bar" style={{ marginBottom: 30 }}>
+            <div className="products-result-count">
+              Hiển thị <strong>{productsList.length}</strong> vật tư phụ kiện chuyên dụng cao cấp
             </div>
           </div>
 
-          <div className="products-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))', gap: 24 }}>
-            {filtered.map(product => (
+          <div className="products-grid">
+            {productsList.map(product => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
