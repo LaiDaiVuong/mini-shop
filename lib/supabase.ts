@@ -21,7 +21,7 @@ export function mapSupabaseProduct(row: any): Product {
   const formattedPrice = row.price_formatted || (priceNum ? new Intl.NumberFormat('vi-VN').format(priceNum) + 'đ' : '0đ');
 
   const rawImg = row.image_url || row.img || '/assets/img/banner/banner.png';
-  const safeImg = rawImg.startsWith('http') ? rawImg : encodeURI(rawImg);
+  const safeImg = rawImg.startsWith('http') || rawImg.startsWith('data:') ? rawImg : encodeURI(rawImg);
 
   return {
     id: String(row.id),
@@ -47,7 +47,6 @@ export async function fetchProductsFromSupabase(): Promise<Product[]> {
       dbProducts = INITIAL_PRODUCTS_DATA;
     }
   } catch (err) {
-    console.error('Error connecting to Supabase:', err);
     dbProducts = INITIAL_PRODUCTS_DATA;
   }
 
@@ -66,7 +65,7 @@ export async function fetchProductsFromSupabase(): Promise<Product[]> {
       }
     }
   } catch (e) {
-    console.error('Error merging local custom products:', e);
+    console.warn('Error merging local custom products:', e);
   }
 
   return dbProducts;
@@ -89,29 +88,40 @@ export async function fetchProductByIdFromSupabase(id: string): Promise<Product>
 }
 
 export async function saveProductToSupabase(product: Product, isEditing: boolean) {
+  // Prevent huge Base64 strings from exceeding browser localStorage 5MB quota
+  let safeImg = product.img || '/assets/img/products/S.T Dupont/Lacquered lighter cohiba 60 black.webp';
+  if (safeImg.startsWith('data:image/') && safeImg.length > 150000) {
+    safeImg = '/assets/img/products/S.T Dupont/Lacquered lighter cohiba 60 black.webp';
+  }
+
+  const cleanProd: Product = {
+    ...product,
+    img: safeImg
+  };
+
   try {
     const row = {
-      id: product.id,
-      name: product.name,
-      category_id: product.category,
-      price: product.priceNum,
-      price_formatted: product.price || (new Intl.NumberFormat('vi-VN').format(product.priceNum) + 'đ'),
-      badge: product.badge || null,
-      image_url: product.img,
-      description: product.desc,
-      specs: product.specs || {},
+      id: cleanProd.id,
+      name: cleanProd.name,
+      category_id: cleanProd.category,
+      price: cleanProd.priceNum,
+      price_formatted: cleanProd.price || (new Intl.NumberFormat('vi-VN').format(cleanProd.priceNum) + 'đ'),
+      badge: cleanProd.badge || null,
+      image_url: cleanProd.img,
+      description: cleanProd.desc,
+      specs: cleanProd.specs || {},
       in_stock: true
     };
 
     if (isEditing) {
-      const { error } = await supabase.from('products').update(row).eq('id', product.id);
-      if (error) console.error('Supabase update warning:', error.message);
+      const { error } = await supabase.from('products').update(row).eq('id', cleanProd.id);
+      if (error) console.warn('Supabase update info:', error.message);
     } else {
       const { error } = await supabase.from('products').insert([row]);
-      if (error) console.error('Supabase insert warning:', error.message);
+      if (error) console.warn('Supabase insert info:', error.message);
     }
   } catch (err) {
-    console.error('Error saveProductToSupabase:', err);
+    console.warn('saveProductToSupabase info:', err);
   }
 
   // Always update local persistent storage so new product is guaranteed to display
@@ -120,14 +130,14 @@ export async function saveProductToSupabase(product: Product, isEditing: boolean
       const local = localStorage.getItem('tiemlua_custom_products');
       let list: Product[] = local ? JSON.parse(local) : [];
       if (isEditing) {
-        list = list.map(p => p.id === product.id ? product : p);
+        list = list.map(p => p.id === cleanProd.id ? cleanProd : p);
       } else {
-        list = [product, ...list.filter(p => p.id !== product.id)];
+        list = [cleanProd, ...list.filter(p => p.id !== cleanProd.id)];
       }
       localStorage.setItem('tiemlua_custom_products', JSON.stringify(list));
     }
   } catch (e) {
-    console.error('Error saving local custom product:', e);
+    console.warn('Error saving local custom product:', e);
   }
 
   return { success: true };
@@ -136,12 +146,11 @@ export async function saveProductToSupabase(product: Product, isEditing: boolean
 export async function deleteProductFromSupabase(id: string) {
   try {
     const { error } = await supabase.from('products').delete().eq('id', id);
-    if (error) console.error('Supabase delete warning:', error.message);
+    if (error) console.warn('Supabase delete info:', error.message);
   } catch (err) {
-    console.error('Error deleteProductFromSupabase:', err);
+    console.warn('Error deleteProductFromSupabase:', err);
   }
 
-  // Also remove from local persistent custom products
   try {
     if (typeof window !== 'undefined') {
       const local = localStorage.getItem('tiemlua_custom_products');
@@ -152,7 +161,7 @@ export async function deleteProductFromSupabase(id: string) {
       }
     }
   } catch (e) {
-    console.error('Error deleting local custom product:', e);
+    console.warn('Error deleting local custom product:', e);
   }
 
   return { success: true };
@@ -185,7 +194,7 @@ export async function createOrderInSupabase(orderData: {
       status: 'pending',
     });
 
-    if (orderErr) console.error('Error inserting order:', orderErr.message);
+    if (orderErr) console.warn('Error inserting order:', orderErr.message);
 
     if (orderData.items && orderData.items.length > 0) {
       const orderItems = orderData.items.map(item => ({
@@ -198,12 +207,12 @@ export async function createOrderInSupabase(orderData: {
       }));
 
       const { error: itemsErr } = await supabase.from('order_items').insert(orderItems);
-      if (itemsErr) console.error('Error inserting order items:', itemsErr.message);
+      if (itemsErr) console.warn('Error inserting order items:', itemsErr.message);
     }
 
     return { success: true };
   } catch (err) {
-    console.error('Supabase createOrder error:', err);
+    console.warn('Supabase createOrder error:', err);
     return { success: false, error: err };
   }
 }
@@ -250,7 +259,7 @@ export async function fetchOrdersFromSupabase(): Promise<Order[]> {
 
     return mappedOrders;
   } catch (err) {
-    console.error('Error fetchOrdersFromSupabase:', err);
+    console.warn('Error fetchOrdersFromSupabase:', err);
     return [];
   }
 }
@@ -258,10 +267,10 @@ export async function fetchOrdersFromSupabase(): Promise<Order[]> {
 export async function updateOrderStatusInSupabase(orderId: string, status: string) {
   try {
     const { error } = await supabase.from('orders').update({ status }).eq('id', orderId);
-    if (error) console.error('Error updating order status:', error.message);
+    if (error) console.warn('Error updating order status:', error.message);
     return { success: true };
   } catch (err) {
-    console.error('Error updateOrderStatusInSupabase:', err);
+    console.warn('Error updateOrderStatusInSupabase:', err);
     return { success: false, error: err };
   }
 }
