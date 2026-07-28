@@ -5,7 +5,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Product, Order } from '@/lib/types';
 import { INITIAL_PRODUCTS_DATA, formatCurrencyVND } from '@/lib/products-data';
-import { fetchProductsFromSupabase } from '@/lib/supabase';
+import { 
+  fetchProductsFromSupabase, 
+  saveProductToSupabase, 
+  deleteProductFromSupabase, 
+  fetchOrdersFromSupabase, 
+  updateOrderStatusInSupabase 
+} from '@/lib/supabase';
 import { RevenueGrowthChart } from '@/components/admin/RevenueGrowthChart';
 import { OrderStatusDonutChart } from '@/components/admin/OrderStatusDonutChart';
 import { ProductModal } from '@/components/admin/ProductModal';
@@ -22,115 +28,71 @@ export default function AdminDashboardPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [searchProd, setSearchProd] = useState('');
   const [orderFilterStatus, setOrderFilterStatus] = useState<string>('all');
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  useEffect(() => {
-    // Load products from Supabase
-    fetchProductsFromSupabase().then((data) => {
-      if (data && data.length > 0) setProducts(data);
-    });
-
-    // Load orders from localStorage or mock
+  // Load live data from Supabase DB on mount
+  const loadSupabaseData = async () => {
+    setIsLoadingData(true);
     try {
-      const localOrders = localStorage.getItem('tiemlua_orders');
-      if (localOrders) {
-        setOrders(JSON.parse(localOrders));
-      } else {
-        const mockOrders: Order[] = [
-          {
-            id: 'TL882910',
-            createdAt: '2026-07-27 14:30',
-            customerInfo: {
-              fullname: 'Nguyễn Văn Hùng',
-              phone: '0988 299 999',
-              email: 'hung.nguyen@gmail.com',
-              city: 'TP. Hồ Chí Minh',
-              district: 'Quận 1',
-              address: '124 Nguyễn Huệ, Phường Bến Nghé',
-              notes: 'Giao giờ hành chính, đóng hộp quà VIP',
-              paymentMethod: 'bank_transfer'
-            },
-            items: [
-              { id: 'st-cohiba-60', name: 'Bật Lửa S.T. Dupont Cohiba 60th Anniversary Black Lacquer', priceNum: 29000000, quantity: 1, img: '/assets/img/products/S.T Dupont/Lacquered lighter cohiba 60 black.webp' }
-            ],
-            subtotal: 29000000,
-            discount: 0,
-            totalAmount: 29000000,
-            status: 'confirmed'
-          },
-          {
-            id: 'TL771204',
-            createdAt: '2026-07-27 11:15',
-            customerInfo: {
-              fullname: 'Trần Thị Minh Anh',
-              phone: '0912 345 678',
-              email: 'minhanh.tran@yahoo.com',
-              city: 'Hà Nội',
-              district: 'Hoàn Kiếm',
-              address: '45 Tràng Tiền',
-              paymentMethod: 'cod'
-            },
-            items: [
-              { id: 'st-guilloche-gold', name: 'Bật Lửa S.T. Dupont Ligne 2 Guilloche Mạ Vàng 24K', priceNum: 18500000, quantity: 1, img: '/assets/img/products/S.T Dupont/Micro Diamond head lighter.webp' }
-            ],
-            subtotal: 18500000,
-            discount: 0,
-            totalAmount: 18500000,
-            status: 'shipping'
-          },
-          {
-            id: 'TL663912',
-            createdAt: '2026-07-26 16:45',
-            customerInfo: {
-              fullname: 'Lê Hoàng Nam',
-              phone: '0977 123 999',
-              city: 'Bình Dương',
-              district: 'Thủ Dầu Một',
-              address: '88 Đại Lộ Bình Dương',
-              paymentMethod: 'bank_transfer'
-            },
-            items: [
-              { id: 'hk-bac-xuoc-gold', name: 'Bật Lửa Dupont Hongkong Bạc Xước Viền Vàng Chuẩn Âm Thanh', priceNum: 2800000, quantity: 2, img: '/assets/img/products/Dupont HongKong/Bạc xước viền vàng.webp' }
-            ],
-            subtotal: 5600000,
-            discount: 0,
-            totalAmount: 5600000,
-            status: 'completed'
-          }
-        ];
-        setOrders(mockOrders);
-        localStorage.setItem('tiemlua_orders', JSON.stringify(mockOrders));
+      const [prodsData, ordersData] = await Promise.all([
+        fetchProductsFromSupabase(),
+        fetchOrdersFromSupabase()
+      ]);
+
+      if (prodsData && prodsData.length > 0) {
+        setProducts(prodsData);
       }
-    } catch (e) {
-      console.error(e);
+
+      if (ordersData && ordersData.length > 0) {
+        setOrders(ordersData);
+      } else {
+        // Fallback to local storage or mock orders if no live orders yet
+        const localOrders = localStorage.getItem('tiemlua_orders');
+        if (localOrders) {
+          setOrders(JSON.parse(localOrders));
+        }
+      }
+    } catch (err) {
+      console.error('Error loading Supabase admin data:', err);
+    } finally {
+      setIsLoadingData(false);
     }
+  };
+
+  useEffect(() => {
+    loadSupabaseData();
   }, []);
 
-  const handleSaveProduct = (prod: Product) => {
-    let updated: Product[];
-    if (editingProduct) {
-      updated = products.map(p => p.id === prod.id ? prod : p);
-    } else {
-      updated = [prod, ...products];
-    }
-    setProducts(updated);
-    localStorage.setItem('tiemlua_admin_products', JSON.stringify(updated));
+  // Save product (Add or Edit) directly to Supabase
+  const handleSaveProduct = async (prod: Product) => {
+    const isEditing = !!editingProduct;
+
+    // Save to Supabase
+    await saveProductToSupabase(prod, isEditing);
+
+    // Update local state and refetch from Supabase
+    await loadSupabaseData();
     setIsModalOpen(false);
     setEditingProduct(null);
   };
 
-  const handleDeleteProduct = (id: string) => {
-    if (confirm('Bạn có chắc chắn muốn xóa sản phẩm này khỏi hệ thống?')) {
-      const updated = products.filter(p => p.id !== id);
-      setProducts(updated);
-      localStorage.setItem('tiemlua_admin_products', JSON.stringify(updated));
+  // Delete product with confirmation dialog
+  const handleDeleteProduct = async (id: string) => {
+    if (confirm('⚠️ CẢNH BÁO: Bạn có chắc chắn muốn xóa sản phẩm này khỏi hệ thống kho Supabase? Thao tác này không thể hoàn tác.')) {
+      await deleteProductFromSupabase(id);
+      await loadSupabaseData();
     }
   };
 
-  const handleUpdateOrderStatus = (orderId: string, newStatus: Order['status']) => {
+  // Update order status directly in Supabase
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: Order['status']) => {
+    await updateOrderStatusInSupabase(orderId, newStatus);
+    
+    // Update state locally
     const updated = orders.map(ord => ord.id === orderId ? { ...ord, status: newStatus } : ord);
     setOrders(updated);
     localStorage.setItem('tiemlua_orders', JSON.stringify(updated));
@@ -303,7 +265,7 @@ export default function AdminDashboardPage() {
             {/* Supabase Status Pill */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '6px 14px', borderRadius: 20, fontSize: '0.775rem', fontWeight: 700, color: '#059669' }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }}></span>
-              Supabase Connected Live
+              Supabase Live Connection
             </div>
 
             {activeTab === 'products' && (
@@ -368,18 +330,25 @@ export default function AdminDashboardPage() {
             <div style={{ background: '#fff', padding: 24, borderRadius: 16, border: '1px solid #e2e8f0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 16 }}>
                 <div>
-                  <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>Danh Sách Sản Phẩm Niêm Yết</h2>
-                  <p style={{ fontSize: '0.85rem', color: '#64748b' }}>Đồng bộ dữ liệu sản phẩm Supabase</p>
+                  <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>Danh Sách Sản Phẩm Niêm Yết (Kho Supabase Live)</h2>
+                  <p style={{ fontSize: '0.85rem', color: '#64748b' }}>Thêm, sửa, xóa sản phẩm trực tiếp với kho dữ liệu</p>
                 </div>
 
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                   <input 
                     type="text" 
-                    placeholder="Tìm sản phẩm..." 
+                    placeholder="Tìm tên sản phẩm..." 
                     value={searchProd}
                     onChange={(e) => setSearchProd(e.target.value)}
                     style={{ padding: '8px 14px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: '0.875rem', width: 220 }}
                   />
+
+                  <button 
+                    onClick={() => { setEditingProduct(null); setIsModalOpen(true); }}
+                    style={{ padding: '9px 18px', background: 'linear-gradient(135deg, var(--color-accent) 0%, #b08b43 100%)', color: '#fff', borderRadius: 8, fontWeight: 800, fontSize: '0.825rem', border: 'none', cursor: 'pointer' }}
+                  >
+                    + THÊM SẢN PHẨM MỚI
+                  </button>
                 </div>
               </div>
 
@@ -434,17 +403,17 @@ export default function AdminDashboardPage() {
             <div style={{ background: '#fff', padding: 24, borderRadius: 16, border: '1px solid #e2e8f0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 16 }}>
                 <div>
-                  <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>Quản Lý Đơn Đặt Hàng</h2>
-                  <p style={{ fontSize: '0.85rem', color: '#64748b' }}>Theo dõi đơn hàng gửi về từ Supabase</p>
+                  <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>Quản Lý Đơn Đặt Hàng (Kho Supabase Live)</h2>
+                  <p style={{ fontSize: '0.85rem', color: '#64748b' }}>Cập nhật trạng thái đơn từ Mới sang Đang giao, Đã giao</p>
                 </div>
 
                 <div style={{ display: 'flex', gap: 8 }}>
                   {[
                     { id: 'all', label: 'Tất cả' },
-                    { id: 'pending', label: 'Chờ xử lý' },
+                    { id: 'pending', label: 'Mới (Chờ xử lý)' },
                     { id: 'confirmed', label: 'Đã xác nhận' },
                     { id: 'shipping', label: 'Đang giao' },
-                    { id: 'completed', label: 'Hoàn thành' }
+                    { id: 'completed', label: 'Đã giao (Hoàn thành)' }
                   ].map(st => (
                     <button
                       key={st.id}
@@ -472,53 +441,68 @@ export default function AdminDashboardPage() {
                     <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', textAlign: 'left' }}>
                       <th style={{ padding: 12 }}>Mã Đơn</th>
                       <th style={{ padding: 12 }}>Khách Hàng</th>
+                      <th style={{ padding: 12 }}>Sản Phẩm Đặt</th>
                       <th style={{ padding: 12 }}>Địa Chỉ Giao</th>
                       <th style={{ padding: 12 }}>Tổng Tiền</th>
                       <th style={{ padding: 12 }}>Trạng Thái</th>
-                      <th style={{ padding: 12, textAlign: 'right' }}>Cập nhật</th>
+                      <th style={{ padding: 12, textAlign: 'right' }}>Đổi Trạng Thái</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredOrders.map(ord => (
-                      <tr key={ord.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: 12, fontWeight: 800, color: 'var(--color-accent)' }}>#{ord.id}</td>
-                        <td style={{ padding: 12 }}>
-                          <div style={{ fontWeight: 700, color: '#0f172a' }}>{ord.customerInfo.fullname}</div>
-                          <div style={{ fontSize: '0.775rem', color: '#64748b' }}>{ord.customerInfo.phone}</div>
-                        </td>
-                        <td style={{ padding: 12, color: '#475569', maxWidth: 220 }}>
-                          {ord.customerInfo.address}, {ord.customerInfo.district}, {ord.customerInfo.city}
-                        </td>
-                        <td style={{ padding: 12, fontWeight: 800, color: '#0f172a' }}>
-                          {formatCurrencyVND(ord.totalAmount)}
-                        </td>
-                        <td style={{ padding: 12 }}>
-                          <span style={{
-                            padding: '4px 10px',
-                            borderRadius: 20,
-                            fontSize: '0.75rem',
-                            fontWeight: 700,
-                            background: ord.status === 'completed' ? '#ecfdf5' : ord.status === 'shipping' ? '#eff6ff' : '#fffbeb',
-                            color: ord.status === 'completed' ? '#10b981' : ord.status === 'shipping' ? '#3b82f6' : '#f59e0b',
-                            border: '1px solid currentColor'
-                          }}>
-                            {ord.status === 'completed' ? '✓ Hoàn Thành' : ord.status === 'shipping' ? '🚚 Đang Giao' : ord.status === 'confirmed' ? '👌 Đã Xác Nhận' : '⏳ Chờ Xử Lý'}
-                          </span>
-                        </td>
-                        <td style={{ padding: 12, textAlign: 'right' }}>
-                          <select 
-                            value={ord.status} 
-                            onChange={(e) => handleUpdateOrderStatus(ord.id, e.target.value as any)}
-                            style={{ padding: '4px 8px', borderRadius: 6, fontSize: '0.8rem', border: '1px solid #cbd5e1' }}
-                          >
-                            <option value="pending">Chờ xử lý</option>
-                            <option value="confirmed">Đã xác nhận</option>
-                            <option value="shipping">Đang giao</option>
-                            <option value="completed">Hoàn thành</option>
-                          </select>
-                        </td>
+                    {filteredOrders.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} style={{ padding: 30, textAlign: 'center', color: '#94a3b8' }}>Chưa có đơn hàng nào trong kho.</td>
                       </tr>
-                    ))}
+                    ) : (
+                      filteredOrders.map(ord => (
+                        <tr key={ord.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: 12, fontWeight: 800, color: 'var(--color-accent)' }}>#{ord.id}</td>
+                          <td style={{ padding: 12 }}>
+                            <div style={{ fontWeight: 700, color: '#0f172a' }}>{ord.customerInfo.fullname}</div>
+                            <div style={{ fontSize: '0.775rem', color: '#64748b' }}>{ord.customerInfo.phone}</div>
+                          </td>
+                          <td style={{ padding: 12, maxWidth: 200 }}>
+                            {ord.items.map((item, idx) => (
+                              <div key={idx} style={{ fontSize: '0.8rem', color: '#334155' }}>
+                                • {item.name} <strong>x{item.quantity}</strong>
+                              </div>
+                            ))}
+                          </td>
+                          <td style={{ padding: 12, color: '#475569', maxWidth: 200 }}>
+                            {ord.customerInfo.address}
+                          </td>
+                          <td style={{ padding: 12, fontWeight: 800, color: '#0f172a' }}>
+                            {formatCurrencyVND(ord.totalAmount)}
+                          </td>
+                          <td style={{ padding: 12 }}>
+                            <span style={{
+                              padding: '4px 10px',
+                              borderRadius: 20,
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              background: ord.status === 'completed' ? '#ecfdf5' : ord.status === 'shipping' ? '#eff6ff' : ord.status === 'confirmed' ? '#fef3c7' : '#fffbeb',
+                              color: ord.status === 'completed' ? '#10b981' : ord.status === 'shipping' ? '#3b82f6' : ord.status === 'confirmed' ? '#d97706' : '#f59e0b',
+                              border: '1px solid currentColor'
+                            }}>
+                              {ord.status === 'completed' ? '✓ Đã Giao (Hoàn Thành)' : ord.status === 'shipping' ? '🚚 Đang Giao Hàng' : ord.status === 'confirmed' ? '👌 Đã Xác Nhận' : '⏳ Mới (Chờ Xử Lý)'}
+                            </span>
+                          </td>
+                          <td style={{ padding: 12, textAlign: 'right' }}>
+                            <select 
+                              value={ord.status} 
+                              onChange={(e) => handleUpdateOrderStatus(ord.id, e.target.value as any)}
+                              style={{ padding: '6px 10px', borderRadius: 6, fontSize: '0.8rem', border: '1px solid #cbd5e1', fontWeight: 700, cursor: 'pointer' }}
+                            >
+                              <option value="pending">⏳ Mới (Chờ xử lý)</option>
+                              <option value="confirmed">👌 Đã xác nhận</option>
+                              <option value="shipping">🚚 Đang giao</option>
+                              <option value="completed">✓ Đã giao (Hoàn thành)</option>
+                              <option value="cancelled">❌ Đã hủy</option>
+                            </select>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>

@@ -59,19 +59,19 @@ ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
 
--- Cho phép mọi người xem danh mục & sản phẩm công khai
+-- Cho phép mọi người xem danh mục & sản phẩm công khai, admin quản lý full
 DROP POLICY IF EXISTS "Public categories read" ON public.categories;
 CREATE POLICY "Public categories read" ON public.categories FOR SELECT USING (true);
 
-DROP POLICY IF EXISTS "Public products read" ON public.products;
-CREATE POLICY "Public products read" ON public.products FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public products full access" ON public.products;
+CREATE POLICY "Public products full access" ON public.products FOR ALL USING (true) WITH CHECK (true);
 
--- Cho phép khách hàng đặt đơn hàng
-DROP POLICY IF EXISTS "Public insert orders" ON public.orders;
-CREATE POLICY "Public insert orders" ON public.orders FOR INSERT WITH CHECK (true);
+-- Cho phép khách hàng gửi đơn hàng & Admin quản lý đơn hàng
+DROP POLICY IF EXISTS "Public orders full access" ON public.orders;
+CREATE POLICY "Public orders full access" ON public.orders FOR ALL USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Public insert order_items" ON public.order_items;
-CREATE POLICY "Public insert order_items" ON public.order_items FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public insert order_items" ON public.order_items FOR ALL USING (true) WITH CHECK (true);
 
 
 -- ============================================================================
