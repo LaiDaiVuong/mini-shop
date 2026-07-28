@@ -28,7 +28,9 @@ export function mapSupabaseProduct(row: any): Product {
     price: formattedPrice,
     priceNum: priceNum,
     badge: row.badge || undefined,
-    img: row.image_url || row.img || '/assets/img/banner/banner.png',
+    img: (row.image_url || row.img || '/assets/img/banner/banner.png').startsWith('http') 
+      ? (row.image_url || row.img) 
+      : encodeURI(row.image_url || row.img || '/assets/img/banner/banner.png'),
     desc: row.description || row.desc || '',
     specs: row.specs || {},
   };

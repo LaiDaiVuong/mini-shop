@@ -1,15 +1,26 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useWishlist } from '@/context/WishlistContext';
 import { INITIAL_PRODUCTS_DATA } from '@/lib/products-data';
+import { fetchProductsFromSupabase } from '@/lib/supabase';
+import { Product } from '@/lib/types';
 import { ProductCard } from '@/components/product/ProductCard';
 
 export default function WishlistPage() {
   const { wishlist, toggleWishlist } = useWishlist();
+  const [allProducts, setAllProducts] = useState<Product[]>(INITIAL_PRODUCTS_DATA);
 
-  const favoriteProducts = INITIAL_PRODUCTS_DATA.filter(p => wishlist.includes(p.id));
+  useEffect(() => {
+    fetchProductsFromSupabase().then(data => {
+      if (data && data.length > 0) {
+        setAllProducts(data);
+      }
+    });
+  }, []);
+
+  const favoriteProducts = allProducts.filter(p => wishlist.includes(p.id));
 
   return (
     <>
