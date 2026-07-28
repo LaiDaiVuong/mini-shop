@@ -240,7 +240,7 @@ export default function AdminDashboardPage() {
             </div>
             <div style={{ overflow: 'hidden' }}>
               <div style={{ fontWeight: 800, fontSize: '0.875rem', color: '#fff', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                {user?.username || 'Lại Đại Vương'}
+                {user?.fullname || 'Lại Đại Vương'}
               </div>
               <div style={{ fontSize: '0.725rem', color: 'var(--color-accent)' }}>Quản Trị Viên VIP</div>
             </div>

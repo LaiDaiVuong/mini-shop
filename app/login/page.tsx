@@ -6,37 +6,78 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123');
-  const [role, setRole] = useState<'admin' | 'user'>('admin');
+  const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
+
+  // Sign In state
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  // Sign Up state
+  const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regFullname, setRegFullname] = useState('');
+
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
-  const { login } = useAuth();
+  const { signIn, signUp } = useAuth();
   const router = useRouter();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username || !password) return;
+    if (!email || !password) return;
 
     setIsLoading(true);
-    
-    setTimeout(() => {
-      login(username, role);
-      setIsLoading(false);
+    setErrorMsg('');
+    setSuccessMsg('');
 
-      if (role === 'admin') {
-        router.push('/admin');
-      } else {
-        router.push('/');
-      }
-    }, 600);
+    const res = await signIn(email, password);
+    setIsLoading(false);
+
+    if (!res.success) {
+      setErrorMsg(res.error || 'Đăng nhập không thành công. Vui lòng kiểm tra lại Email và Mật khẩu.');
+    } else {
+      setSuccessMsg('Đăng nhập thành công! Đang chuyển hướng...');
+      setTimeout(() => {
+        if (email.includes('admin')) {
+          router.push('/admin');
+        } else {
+          router.push('/');
+        }
+      }, 500);
+    }
   };
 
-  const handleFillDemo = (demoUser: string, demoPass: string, demoRole: 'admin' | 'user') => {
-    setUsername(demoUser);
-    setPassword(demoPass);
-    setRole(demoRole);
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!regEmail || !regPassword || !regFullname) return;
+
+    if (regPassword.length < 6) {
+      setErrorMsg('Mật khẩu phải chứa ít nhất 6 ký tự!');
+      return;
+    }
+
+    setIsLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    const res = await signUp(regEmail, regPassword, regFullname);
+    setIsLoading(false);
+
+    if (!res.success) {
+      setErrorMsg(res.error || 'Đăng ký không thành công. Email này có thể đã được sử dụng.');
+    } else {
+      setSuccessMsg('Đăng ký tài khoản Supabase thành công! Bạn đã tự động đăng nhập.');
+      setTimeout(() => {
+        if (regEmail.includes('admin')) {
+          router.push('/admin');
+        } else {
+          router.push('/');
+        }
+      }, 800);
+    }
   };
 
   return (
@@ -47,12 +88,12 @@ export default function LoginPage() {
           <div className="breadcrumb">
             <Link href="/">Trang Chủ</Link>
             <span>&rsaquo;</span>
-            <span className="active-crumb">Đăng Nhập Hệ Thống</span>
+            <span className="active-crumb">Tài Khoản Supabase Live</span>
           </div>
         </div>
       </section>
 
-      {/* Main Luxury Split Login Section */}
+      {/* Main Luxury Split Login/Signup Section */}
       <section style={{ padding: '40px 0 90px', background: 'var(--color-bg-secondary)' }}>
         <div className="container" style={{ maxWidth: 1040 }}>
           
@@ -96,15 +137,15 @@ export default function LoginPage() {
 
               <div>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'rgba(197, 160, 89, 0.2)', border: '1px solid var(--color-accent)', padding: '6px 16px', borderRadius: 30, color: 'var(--color-accent)', fontSize: '0.75rem', fontWeight: 800, letterSpacing: 1.5, marginBottom: 24 }}>
-                  ⚡ TIỆM LỬA LUXURY PORTAL
+                  ⚡ SUPABASE AUTHENTICATION
                 </div>
 
                 <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '2rem', fontWeight: 800, color: '#fff', lineHeight: 1.3, marginBottom: 16 }}>
-                  ĐẲNG CẤP BẬT LỬA QUÝ ÔNG
+                  XÁC THỰC THỰC THẾ SUPABASE
                 </h2>
 
                 <p style={{ color: '#cbd5e1', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: 30 }}>
-                  Trải nghiệm hệ thống quản trị và mua sắm các dòng kiệt tác S.T. Dupont France, Rowenta R10 Đức & Dupont Hongkong chế tác chuẩn âm thanh.
+                  Tài khoản đăng ký và đăng nhập được mã hóa & lưu trữ trực tiếp trên hệ thống Supabase Auth đám mây an toàn tuyệt đối.
                 </p>
 
                 {/* Hero Showcase Image */}
@@ -115,8 +156,7 @@ export default function LoginPage() {
                     style={{ 
                       maxHeight: 220, 
                       objectFit: 'contain', 
-                      filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.6))',
-                      transition: 'transform 0.4s ease'
+                      filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.6))'
                     }} 
                   />
                 </div>
@@ -128,182 +168,231 @@ export default function LoginPage() {
                   "Tiếng Pinh ngân vang — Khẳng định vị thế thượng lưu."
                 </div>
                 <div style={{ display: 'flex', gap: 20, fontSize: '0.75rem', color: '#94a3b8' }}>
-                  <span>🔒 Bảo mật mã hóa SSL</span>
-                  <span>⚡ Xác thực 1-Touch</span>
+                  <span>🔒 Supabase Auth Password Hash</span>
+                  <span>⚡ Session Persistence</span>
                 </div>
               </div>
 
             </div>
 
-            {/* RIGHT COLUMN: Interactive Login Form */}
+            {/* RIGHT COLUMN: Interactive Form Column */}
             <div style={{ padding: '48px 40px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               
-              <div style={{ marginBottom: 30 }}>
-                <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-text-main)', marginBottom: 6 }}>
-                  ĐĂNG NHẬP
-                </h1>
-                <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
-                  Vui lòng chọn vai trò và nhập thông tin tài khoản của bạn
-                </p>
-              </div>
-
-              <form onSubmit={handleLogin}>
-                
-                {/* Role Switcher Pills */}
-                <div style={{ marginBottom: 22 }}>
-                  <label className="clean-form-label" style={{ fontWeight: 700, fontSize: '0.8rem', color: '#475569', display: 'block', marginBottom: 8 }}>
-                    VAI TRÒ TRUY CẬP HỆ THỐNG
-                  </label>
-                  <div style={{ display: 'flex', background: '#f1f5f9', padding: 4, borderRadius: 12, border: '1px solid #e2e8f0' }}>
-                    <button
-                      type="button"
-                      onClick={() => setRole('admin')}
-                      style={{
-                        flex: 1,
-                        padding: '10px 14px',
-                        borderRadius: 8,
-                        fontWeight: 800,
-                        fontSize: '0.825rem',
-                        border: 'none',
-                        cursor: 'pointer',
-                        background: role === 'admin' ? 'var(--color-accent)' : 'transparent',
-                        color: role === 'admin' ? '#ffffff' : '#64748b',
-                        boxShadow: role === 'admin' ? '0 4px 12px rgba(197, 160, 89, 0.35)' : 'none',
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      👑 Quản Trị Viên (Admin)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRole('user')}
-                      style={{
-                        flex: 1,
-                        padding: '10px 14px',
-                        borderRadius: 8,
-                        fontWeight: 800,
-                        fontSize: '0.825rem',
-                        border: 'none',
-                        cursor: 'pointer',
-                        background: role === 'user' ? 'var(--color-accent)' : 'transparent',
-                        color: role === 'user' ? '#ffffff' : '#64748b',
-                        boxShadow: role === 'user' ? '0 4px 12px rgba(197, 160, 89, 0.35)' : 'none',
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      ✨ Khách VIP (Store)
-                    </button>
-                  </div>
-                </div>
-
-                {/* Username Input */}
-                <div className="clean-form-group" style={{ marginBottom: 18 }}>
-                  <label className="clean-form-label" style={{ fontWeight: 700, fontSize: '0.8rem', color: '#475569' }}>
-                    Tên đăng nhập / Email <span>*</span>
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <input 
-                      type="text" 
-                      className="clean-form-input" 
-                      placeholder="Nhập username (VD: admin)" 
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      required 
-                      style={{ paddingLeft: 40, height: 48, borderRadius: 10 }}
-                    />
-                    <span style={{ position: 'absolute', left: 14, top: 14, color: '#94a3b8', fontSize: '1rem' }}>👤</span>
-                  </div>
-                </div>
-
-                {/* Password Input with Eye Toggle */}
-                <div className="clean-form-group" style={{ marginBottom: 20 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <label className="clean-form-label" style={{ fontWeight: 700, fontSize: '0.8rem', color: '#475569', margin: 0 }}>
-                      Mật khẩu <span>*</span>
-                    </label>
-                    <a href="#forgot" onClick={(e) => { e.preventDefault(); alert('Mật khẩu mặc định hệ thống: admin123'); }} style={{ fontSize: '0.775rem', color: 'var(--color-accent)', textDecoration: 'none', fontWeight: 600 }}>
-                      Quên mật khẩu?
-                    </a>
-                  </div>
-
-                  <div style={{ position: 'relative' }}>
-                    <input 
-                      type={showPassword ? 'text' : 'password'} 
-                      className="clean-form-input" 
-                      placeholder="Nhập mật khẩu" 
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required 
-                      style={{ paddingLeft: 40, paddingRight: 40, height: 48, borderRadius: 10 }}
-                    />
-                    <span style={{ position: 'absolute', left: 14, top: 14, color: '#94a3b8', fontSize: '1rem' }}>🔑</span>
-                    <button 
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      style={{ position: 'absolute', right: 12, top: 12, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '1.1rem' }}
-                    >
-                      {showPassword ? '👁️' : '🙈'}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Remember Me Checkbox */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24 }}>
-                  <input type="checkbox" id="rememberMe" defaultChecked style={{ accentColor: 'var(--color-accent)', width: 16, height: 16 }} />
-                  <label htmlFor="rememberMe" style={{ fontSize: '0.825rem', color: '#64748b', cursor: 'pointer' }}>Ghi nhớ phiên đăng nhập</label>
-                </div>
-
-                {/* Submit Button */}
-                <button 
-                  type="submit"
-                  disabled={isLoading}
+              {/* Tab Switcher: Đăng Nhập vs. Đăng Ký */}
+              <div style={{ display: 'flex', background: '#f1f5f9', padding: 4, borderRadius: 12, border: '1px solid #e2e8f0', marginBottom: 24 }}>
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('signin'); setErrorMsg(''); setSuccessMsg(''); }}
                   style={{
-                    width: '100%',
-                    height: 50,
-                    background: 'linear-gradient(135deg, var(--color-accent) 0%, #b08b43 100%)',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: 10,
+                    flex: 1,
+                    padding: '12px 16px',
+                    borderRadius: 8,
                     fontWeight: 800,
-                    fontSize: '0.9rem',
-                    letterSpacing: 1,
-                    textTransform: 'uppercase',
-                    cursor: isLoading ? 'not-allowed' : 'pointer',
-                    boxShadow: '0 6px 20px rgba(197, 160, 89, 0.4)',
-                    transition: 'transform 0.2s ease, opacity 0.2s ease',
-                    opacity: isLoading ? 0.7 : 1
+                    fontSize: '0.875rem',
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: activeTab === 'signin' ? 'var(--color-accent)' : 'transparent',
+                    color: activeTab === 'signin' ? '#ffffff' : '#64748b',
+                    boxShadow: activeTab === 'signin' ? '0 4px 12px rgba(197, 160, 89, 0.35)' : 'none',
+                    transition: 'all 0.2s ease'
                   }}
                 >
-                  {isLoading ? 'ĐANG XÁC THỰC...' : 'XÁC NHẬN ĐĂNG NHẬP'}
+                  🔑 ĐĂNG NHẬP
                 </button>
-
-              </form>
-
-              {/* Demo Accounts Quick-Fill Helper */}
-              <div style={{ marginTop: 28, paddingTop: 20, borderTop: '1px solid #f1f5f9' }}>
-                <div style={{ fontSize: '0.775rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
-                  ⚡ THỬ NGHIỆM ĐĂNG NHẬP NHANH
-                </div>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <button 
-                    type="button"
-                    onClick={() => handleFillDemo('admin', 'admin123', 'admin')}
-                    style={{ flex: 1, padding: '8px 10px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: '0.75rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}
-                  >
-                    👑 Admin (admin)
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => handleFillDemo('khachvip', '123456', 'user')}
-                    style={{ flex: 1, padding: '8px 10px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: '0.75rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}
-                  >
-                    ✨ Khách VIP (khachvip)
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('signup'); setErrorMsg(''); setSuccessMsg(''); }}
+                  style={{
+                    flex: 1,
+                    padding: '12px 16px',
+                    borderRadius: 8,
+                    fontWeight: 800,
+                    fontSize: '0.875rem',
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: activeTab === 'signup' ? 'var(--color-accent)' : 'transparent',
+                    color: activeTab === 'signup' ? '#ffffff' : '#64748b',
+                    boxShadow: activeTab === 'signup' ? '0 4px 12px rgba(197, 160, 89, 0.35)' : 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  📝 ĐĂNG KÝ TÀI KHOẢN
+                </button>
               </div>
 
+              {/* Alert Messages */}
+              {errorMsg && (
+                <div style={{ padding: '12px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, color: '#dc2626', fontSize: '0.825rem', fontWeight: 600, marginBottom: 18 }}>
+                  ⚠️ {errorMsg}
+                </div>
+              )}
+              {successMsg && (
+                <div style={{ padding: '12px 16px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, color: '#166534', fontSize: '0.825rem', fontWeight: 600, marginBottom: 18 }}>
+                  ✓ {successMsg}
+                </div>
+              )}
+
+              {/* TAB 1: SIGN IN FORM */}
+              {activeTab === 'signin' && (
+                <form onSubmit={handleSignIn}>
+                  <div className="clean-form-group" style={{ marginBottom: 18 }}>
+                    <label className="clean-form-label" style={{ fontWeight: 700, fontSize: '0.8rem', color: '#475569' }}>
+                      Địa chỉ Email <span>*</span>
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <input 
+                        type="email" 
+                        className="clean-form-input" 
+                        placeholder="Ví dụ: khachhang@gmail.com" 
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required 
+                        style={{ paddingLeft: 40, height: 48, borderRadius: 10 }}
+                      />
+                      <span style={{ position: 'absolute', left: 14, top: 14, color: '#94a3b8', fontSize: '1rem' }}>✉️</span>
+                    </div>
+                  </div>
+
+                  <div className="clean-form-group" style={{ marginBottom: 20 }}>
+                    <label className="clean-form-label" style={{ fontWeight: 700, fontSize: '0.8rem', color: '#475569' }}>
+                      Mật khẩu <span>*</span>
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <input 
+                        type={showPassword ? 'text' : 'password'} 
+                        className="clean-form-input" 
+                        placeholder="Nhập mật khẩu Supabase" 
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required 
+                        style={{ paddingLeft: 40, paddingRight: 40, height: 48, borderRadius: 10 }}
+                      />
+                      <span style={{ position: 'absolute', left: 14, top: 14, color: '#94a3b8', fontSize: '1rem' }}>🔑</span>
+                      <button 
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        style={{ position: 'absolute', right: 12, top: 12, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '1.1rem' }}
+                      >
+                        {showPassword ? '👁️' : '🙈'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <button 
+                    type="submit"
+                    disabled={isLoading}
+                    style={{
+                      width: '100%',
+                      height: 50,
+                      background: 'linear-gradient(135deg, var(--color-accent) 0%, #b08b43 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: 10,
+                      fontWeight: 800,
+                      fontSize: '0.9rem',
+                      letterSpacing: 1,
+                      textTransform: 'uppercase',
+                      cursor: isLoading ? 'not-allowed' : 'pointer',
+                      boxShadow: '0 6px 20px rgba(197, 160, 89, 0.4)',
+                      opacity: isLoading ? 0.7 : 1
+                    }}
+                  >
+                    {isLoading ? 'ĐANG ĐĂNG NHẬP SUPABASE...' : 'ĐĂNG NHẬP SUPABASE'}
+                  </button>
+                </form>
+              )}
+
+              {/* TAB 2: SIGN UP FORM */}
+              {activeTab === 'signup' && (
+                <form onSubmit={handleSignUp}>
+                  <div className="clean-form-group" style={{ marginBottom: 16 }}>
+                    <label className="clean-form-label" style={{ fontWeight: 700, fontSize: '0.8rem', color: '#475569' }}>
+                      Họ và tên quý khách <span>*</span>
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <input 
+                        type="text" 
+                        className="clean-form-input" 
+                        placeholder="Ví dụ: Nguyễn Văn Hùng" 
+                        value={regFullname}
+                        onChange={(e) => setRegFullname(e.target.value)}
+                        required 
+                        style={{ paddingLeft: 40, height: 46, borderRadius: 10 }}
+                      />
+                      <span style={{ position: 'absolute', left: 14, top: 13, color: '#94a3b8', fontSize: '1rem' }}>👤</span>
+                    </div>
+                  </div>
+
+                  <div className="clean-form-group" style={{ marginBottom: 16 }}>
+                    <label className="clean-form-label" style={{ fontWeight: 700, fontSize: '0.8rem', color: '#475569' }}>
+                      Địa chỉ Email <span>*</span>
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <input 
+                        type="email" 
+                        className="clean-form-input" 
+                        placeholder="Ví dụ: hung.nguyen@gmail.com" 
+                        value={regEmail}
+                        onChange={(e) => setRegEmail(e.target.value)}
+                        required 
+                        style={{ paddingLeft: 40, height: 46, borderRadius: 10 }}
+                      />
+                      <span style={{ position: 'absolute', left: 14, top: 13, color: '#94a3b8', fontSize: '1rem' }}>✉️</span>
+                    </div>
+                  </div>
+
+                  <div className="clean-form-group" style={{ marginBottom: 20 }}>
+                    <label className="clean-form-label" style={{ fontWeight: 700, fontSize: '0.8rem', color: '#475569' }}>
+                      Mật khẩu (Tối thiểu 6 ký tự) <span>*</span>
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <input 
+                        type={showPassword ? 'text' : 'password'} 
+                        className="clean-form-input" 
+                        placeholder="Nhập mật khẩu an toàn" 
+                        value={regPassword}
+                        onChange={(e) => setRegPassword(e.target.value)}
+                        required 
+                        minLength={6}
+                        style={{ paddingLeft: 40, paddingRight: 40, height: 46, borderRadius: 10 }}
+                      />
+                      <span style={{ position: 'absolute', left: 14, top: 13, color: '#94a3b8', fontSize: '1rem' }}>🔑</span>
+                      <button 
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        style={{ position: 'absolute', right: 12, top: 11, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '1.1rem' }}
+                      >
+                        {showPassword ? '👁️' : '🙈'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <button 
+                    type="submit"
+                    disabled={isLoading}
+                    style={{
+                      width: '100%',
+                      height: 50,
+                      background: 'linear-gradient(135deg, var(--color-accent) 0%, #b08b43 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: 10,
+                      fontWeight: 800,
+                      fontSize: '0.9rem',
+                      letterSpacing: 1,
+                      textTransform: 'uppercase',
+                      cursor: isLoading ? 'not-allowed' : 'pointer',
+                      boxShadow: '0 6px 20px rgba(197, 160, 89, 0.4)',
+                      opacity: isLoading ? 0.7 : 1
+                    }}
+                  >
+                    {isLoading ? 'ĐANG TẠO TÀI KHOẢN SUPABASE...' : 'TẠO TÀI KHOẢN MỚI'}
+                  </button>
+                </form>
+              )}
+
               {/* Back to Home Link */}
-              <div style={{ marginTop: 20, textAlign: 'center' }}>
+              <div style={{ marginTop: 24, textAlign: 'center' }}>
                 <Link href="/" style={{ fontSize: '0.825rem', color: '#64748b', textDecoration: 'none', fontWeight: 600 }}>
                   &larr; Quay lại trang chủ Tiệm Lửa
                 </Link>
