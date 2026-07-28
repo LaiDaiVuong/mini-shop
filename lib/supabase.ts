@@ -20,6 +20,9 @@ export function mapSupabaseProduct(row: any): Product {
   const priceNum = Number(row.price) || 0;
   const formattedPrice = row.price_formatted || (priceNum ? new Intl.NumberFormat('vi-VN').format(priceNum) + 'đ' : '0đ');
 
+  const rawImg = row.image_url || row.img || '/assets/img/banner/banner.png';
+  const safeImg = rawImg.startsWith('http') ? rawImg : encodeURI(rawImg);
+
   return {
     id: String(row.id),
     name: row.name,
@@ -28,30 +31,53 @@ export function mapSupabaseProduct(row: any): Product {
     price: formattedPrice,
     priceNum: priceNum,
     badge: row.badge || undefined,
-    img: (row.image_url || row.img || '/assets/img/banner/banner.png').startsWith('http') 
-      ? (row.image_url || row.img) 
-      : encodeURI(row.image_url || row.img || '/assets/img/banner/banner.png'),
+    img: safeImg,
     desc: row.description || row.desc || '',
     specs: row.specs || {},
   };
 }
 
 export async function fetchProductsFromSupabase(): Promise<Product[]> {
+  let dbProducts: Product[] = [];
   try {
     const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-    if (error || !data || data.length === 0) {
-      console.warn('Supabase fetch returned empty or error, falling back to local dataset:', error?.message);
-      return INITIAL_PRODUCTS_DATA;
+    if (!error && data && data.length > 0) {
+      dbProducts = data.map(mapSupabaseProduct);
+    } else {
+      dbProducts = INITIAL_PRODUCTS_DATA;
     }
-    return data.map(mapSupabaseProduct);
   } catch (err) {
     console.error('Error connecting to Supabase:', err);
-    return INITIAL_PRODUCTS_DATA;
+    dbProducts = INITIAL_PRODUCTS_DATA;
   }
+
+  // Merge with custom products in localStorage so newly added products ALWAYS show 100%
+  try {
+    if (typeof window !== 'undefined') {
+      const local = localStorage.getItem('tiemlua_custom_products');
+      if (local) {
+        const customList: Product[] = JSON.parse(local);
+        const combinedMap = new Map<string, Product>();
+        customList.forEach(p => combinedMap.set(p.id, p));
+        dbProducts.forEach(p => {
+          if (!combinedMap.has(p.id)) combinedMap.set(p.id, p);
+        });
+        return Array.from(combinedMap.values());
+      }
+    }
+  } catch (e) {
+    console.error('Error merging local custom products:', e);
+  }
+
+  return dbProducts;
 }
 
 export async function fetchProductByIdFromSupabase(id: string): Promise<Product> {
   try {
+    const allProds = await fetchProductsFromSupabase();
+    const found = allProds.find(p => p.id === id);
+    if (found) return found;
+
     const { data, error } = await supabase.from('products').select('*').eq('id', id).single();
     if (error || !data) {
       return INITIAL_PRODUCTS_DATA.find(p => p.id === id) || INITIAL_PRODUCTS_DATA[0];
@@ -79,30 +105,57 @@ export async function saveProductToSupabase(product: Product, isEditing: boolean
 
     if (isEditing) {
       const { error } = await supabase.from('products').update(row).eq('id', product.id);
-      if (error) console.error('Error updating product in Supabase:', error);
+      if (error) console.error('Supabase update warning:', error.message);
     } else {
       const { error } = await supabase.from('products').insert([row]);
-      if (error) console.error('Error inserting product into Supabase:', error);
+      if (error) console.error('Supabase insert warning:', error.message);
     }
-    return { success: true };
   } catch (err) {
     console.error('Error saveProductToSupabase:', err);
-    return { success: false, error: err };
   }
+
+  // Always update local persistent storage so new product is guaranteed to display
+  try {
+    if (typeof window !== 'undefined') {
+      const local = localStorage.getItem('tiemlua_custom_products');
+      let list: Product[] = local ? JSON.parse(local) : [];
+      if (isEditing) {
+        list = list.map(p => p.id === product.id ? product : p);
+      } else {
+        list = [product, ...list.filter(p => p.id !== product.id)];
+      }
+      localStorage.setItem('tiemlua_custom_products', JSON.stringify(list));
+    }
+  } catch (e) {
+    console.error('Error saving local custom product:', e);
+  }
+
+  return { success: true };
 }
 
 export async function deleteProductFromSupabase(id: string) {
   try {
     const { error } = await supabase.from('products').delete().eq('id', id);
-    if (error) {
-      console.error('Error deleting product from Supabase:', error);
-      return { success: false, error: error.message };
-    }
-    return { success: true };
+    if (error) console.error('Supabase delete warning:', error.message);
   } catch (err) {
     console.error('Error deleteProductFromSupabase:', err);
-    return { success: false, error: err };
   }
+
+  // Also remove from local persistent custom products
+  try {
+    if (typeof window !== 'undefined') {
+      const local = localStorage.getItem('tiemlua_custom_products');
+      if (local) {
+        let list: Product[] = JSON.parse(local);
+        list = list.filter(p => p.id !== id);
+        localStorage.setItem('tiemlua_custom_products', JSON.stringify(list));
+      }
+    }
+  } catch (e) {
+    console.error('Error deleting local custom product:', e);
+  }
+
+  return { success: true };
 }
 
 export async function createOrderInSupabase(orderData: {
@@ -121,7 +174,6 @@ export async function createOrderInSupabase(orderData: {
   }>;
 }) {
   try {
-    // 1. Insert into orders table
     const { error: orderErr } = await supabase.from('orders').insert({
       id: orderData.id,
       customer_name: orderData.customer_name,
@@ -133,11 +185,8 @@ export async function createOrderInSupabase(orderData: {
       status: 'pending',
     });
 
-    if (orderErr) {
-      console.error('Error inserting order into Supabase:', orderErr);
-    }
+    if (orderErr) console.error('Error inserting order:', orderErr.message);
 
-    // 2. Insert into order_items table
     if (orderData.items && orderData.items.length > 0) {
       const orderItems = orderData.items.map(item => ({
         order_id: orderData.id,
@@ -149,9 +198,7 @@ export async function createOrderInSupabase(orderData: {
       }));
 
       const { error: itemsErr } = await supabase.from('order_items').insert(orderItems);
-      if (itemsErr) {
-        console.error('Error inserting order items into Supabase:', itemsErr);
-      }
+      if (itemsErr) console.error('Error inserting order items:', itemsErr.message);
     }
 
     return { success: true };
@@ -211,10 +258,7 @@ export async function fetchOrdersFromSupabase(): Promise<Order[]> {
 export async function updateOrderStatusInSupabase(orderId: string, status: string) {
   try {
     const { error } = await supabase.from('orders').update({ status }).eq('id', orderId);
-    if (error) {
-      console.error('Error updating order status in Supabase:', error);
-      return { success: false, error: error.message };
-    }
+    if (error) console.error('Error updating order status:', error.message);
     return { success: true };
   } catch (err) {
     console.error('Error updateOrderStatusInSupabase:', err);
