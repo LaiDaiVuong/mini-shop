@@ -666,9 +666,9 @@ export default function AdminDashboardPage() {
                               {/* Inventory Status Pill */}
                               <td style={{ padding: 14 }}>
                                 <span style={{
-                                  padding: '4px 10px',
+                                  padding: '3px 8px',
                                   borderRadius: 20,
-                                  fontSize: '0.725rem',
+                                  fontSize: '0.675rem',
                                   fontWeight: 800,
                                   background: isOut ? '#fef2f2' : isLow ? '#fffbeb' : '#ecfdf5',
                                   color: isOut ? '#EF4444' : isLow ? '#C89B3C' : '#10B981',
@@ -684,9 +684,9 @@ export default function AdminDashboardPage() {
                               {/* Badge Pill */}
                               <td style={{ padding: 14 }}>
                                 <span style={{ 
-                                  padding: '4px 10px',
+                                  padding: '3px 8px',
                                   borderRadius: 20,
-                                  fontSize: '0.725rem',
+                                  fontSize: '0.675rem',
                                   fontWeight: 800,
                                   background: '#fffbeb',
                                   color: '#C89B3C',
