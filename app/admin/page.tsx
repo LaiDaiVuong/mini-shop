@@ -444,19 +444,35 @@ export default function AdminDashboardPage() {
                       <th style={{ padding: 12 }}>Sản Phẩm Đặt</th>
                       <th style={{ padding: 12 }}>Địa Chỉ Giao</th>
                       <th style={{ padding: 12 }}>Tổng Tiền</th>
-                      <th style={{ padding: 12 }}>Trạng Thái</th>
-                      <th style={{ padding: 12, textAlign: 'right' }}>Đổi Trạng Thái</th>
+                      <th style={{ padding: 12, textAlign: 'right' }}>Cập Nhật</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredOrders.length === 0 ? (
                       <tr>
-                        <td colSpan={7} style={{ padding: 30, textAlign: 'center', color: '#94a3b8' }}>Chưa có đơn hàng nào trong kho.</td>
+                        <td colSpan={6} style={{ padding: 30, textAlign: 'center', color: '#94a3b8' }}>Chưa có đơn hàng nào trong kho.</td>
                       </tr>
                     ) : (
                       filteredOrders.map(ord => (
                         <tr key={ord.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                          <td style={{ padding: 12, fontWeight: 800, color: 'var(--color-accent)' }}>#{ord.id}</td>
+                          <td style={{ padding: 12 }}>
+                            <div style={{ marginBottom: 6 }}>
+                              <span style={{
+                                padding: '3px 9px',
+                                borderRadius: 20,
+                                fontSize: '0.725rem',
+                                fontWeight: 800,
+                                background: ord.status === 'completed' ? '#ecfdf5' : ord.status === 'shipping' ? '#eff6ff' : ord.status === 'confirmed' ? '#fef3c7' : ord.status === 'cancelled' ? '#fef2f2' : '#fffbeb',
+                                color: ord.status === 'completed' ? '#10b981' : ord.status === 'shipping' ? '#3b82f6' : ord.status === 'confirmed' ? '#d97706' : ord.status === 'cancelled' ? '#ef4444' : '#f59e0b',
+                                border: '1px solid currentColor',
+                                display: 'inline-block'
+                              }}>
+                                {ord.status === 'completed' ? '✓ Đã Giao' : ord.status === 'shipping' ? '🚚 Đang Giao' : ord.status === 'confirmed' ? '👌 Đã Xác Nhận' : ord.status === 'cancelled' ? '❌ Đã Hủy' : '⏳ Mới'}
+                              </span>
+                            </div>
+                            <div style={{ fontWeight: 800, color: 'var(--color-accent)', fontSize: '0.95rem' }}>#{ord.id}</div>
+                            {ord.createdAt && <div style={{ fontSize: '0.725rem', color: '#94a3b8', marginTop: 2 }}>{ord.createdAt}</div>}
+                          </td>
                           <td style={{ padding: 12 }}>
                             <div style={{ fontWeight: 700, color: '#0f172a' }}>{ord.customerInfo.fullname}</div>
                             <div style={{ fontSize: '0.775rem', color: '#64748b' }}>{ord.customerInfo.phone}</div>
@@ -473,19 +489,6 @@ export default function AdminDashboardPage() {
                           </td>
                           <td style={{ padding: 12, fontWeight: 800, color: '#0f172a' }}>
                             {formatCurrencyVND(ord.totalAmount)}
-                          </td>
-                          <td style={{ padding: 12 }}>
-                            <span style={{
-                              padding: '4px 10px',
-                              borderRadius: 20,
-                              fontSize: '0.75rem',
-                              fontWeight: 700,
-                              background: ord.status === 'completed' ? '#ecfdf5' : ord.status === 'shipping' ? '#eff6ff' : ord.status === 'confirmed' ? '#fef3c7' : '#fffbeb',
-                              color: ord.status === 'completed' ? '#10b981' : ord.status === 'shipping' ? '#3b82f6' : ord.status === 'confirmed' ? '#d97706' : '#f59e0b',
-                              border: '1px solid currentColor'
-                            }}>
-                              {ord.status === 'completed' ? '✓ Đã Giao (Hoàn Thành)' : ord.status === 'shipping' ? '🚚 Đang Giao Hàng' : ord.status === 'confirmed' ? '👌 Đã Xác Nhận' : '⏳ Mới (Chờ Xử Lý)'}
-                            </span>
                           </td>
                           <td style={{ padding: 12, textAlign: 'right' }}>
                             <select 
