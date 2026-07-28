@@ -2,8 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 import { Product } from './types';
 import { INITIAL_PRODUCTS_DATA } from './products-data';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://lnwltbvlifrhyrpwtmmf.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_nkefygNGjpLMtEsPv127jQ_yJakszuM';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
