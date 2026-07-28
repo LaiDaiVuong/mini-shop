@@ -9,7 +9,7 @@ export default function LoginPage() {
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
 
   // Sign In state
-  const [email, setEmail] = useState('');
+  const [emailOrUser, setEmailOrUser] = useState('');
   const [password, setPassword] = useState('');
 
   // Sign Up state
@@ -27,21 +27,21 @@ export default function LoginPage() {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
+    if (!emailOrUser || !password) return;
 
     setIsLoading(true);
     setErrorMsg('');
     setSuccessMsg('');
 
-    const res = await signIn(email, password);
+    const res = await signIn(emailOrUser, password);
     setIsLoading(false);
 
     if (!res.success) {
-      setErrorMsg(res.error || 'Đăng nhập không thành công. Vui lòng kiểm tra lại Email / Số điện thoại và Mật khẩu.');
+      setErrorMsg(res.error || 'Đăng nhập không thành công. Vui lòng kiểm tra lại Tên đăng nhập / Email và Mật khẩu.');
     } else {
       setSuccessMsg('Đăng nhập thành công! Đang chuyển hướng...');
       setTimeout(() => {
-        if (email.includes('admin')) {
+        if (res.isAdmin || emailOrUser.trim().toLowerCase() === 'admin') {
           router.push('/admin');
         } else {
           router.push('/');
@@ -69,13 +69,9 @@ export default function LoginPage() {
     if (!res.success) {
       setErrorMsg(res.error || 'Đăng ký không thành công. Thông tin này có thể đã được đăng ký.');
     } else {
-      setSuccessMsg('Đăng ký tài khoản Tiệm Lửa thành công! Bạn đã tự động đăng nhập.');
+      setSuccessMsg('Đăng ký tài khoản Khách hàng Tiệm Lửa thành công!');
       setTimeout(() => {
-        if (regEmail.includes('admin')) {
-          router.push('/admin');
-        } else {
-          router.push('/');
-        }
+        router.push('/');
       }, 800);
     }
   };
@@ -178,7 +174,7 @@ export default function LoginPage() {
             {/* RIGHT COLUMN: Interactive Form Column */}
             <div style={{ padding: '48px 40px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               
-              {/* Tab Switcher: Đăng Nhập vs. Đăng Ký */}
+              {/* Tab Switcher: Đăng Nhập vs. Đăng Ký Khách Hàng */}
               <div style={{ display: 'flex', background: '#f1f5f9', padding: 4, borderRadius: 12, border: '1px solid #e2e8f0', marginBottom: 24, width: '100%' }}>
                 <button
                   type="button"
@@ -216,7 +212,7 @@ export default function LoginPage() {
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  📝 ĐĂNG KÝ TÀI KHOẢN
+                  📝 ĐĂNG KÝ THÀNH VIÊN
                 </button>
               </div>
 
@@ -235,21 +231,22 @@ export default function LoginPage() {
               {/* TAB 1: SIGN IN FORM */}
               {activeTab === 'signin' && (
                 <form onSubmit={handleSignIn} style={{ width: '100%' }}>
+                  
                   <div className="clean-form-group" style={{ marginBottom: 18, width: '100%' }}>
                     <label className="clean-form-label" style={{ fontWeight: 700, fontSize: '0.8rem', color: '#475569', display: 'block', marginBottom: 6 }}>
-                      Email / Số điện thoại <span>*</span>
+                      Tên đăng nhập / Email / Số điện thoại <span>*</span>
                     </label>
                     <div style={{ position: 'relative', width: '100%' }}>
                       <input 
                         type="text" 
                         className="clean-form-input" 
                         placeholder="Nhập Email hoặc Số điện thoại" 
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        value={emailOrUser}
+                        onChange={(e) => setEmailOrUser(e.target.value)}
                         required 
                         style={{ width: '100%', boxSizing: 'border-box', paddingLeft: 42, paddingRight: 16, height: 48, borderRadius: 10, border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
                       />
-                      <span style={{ position: 'absolute', left: 14, top: 13, color: '#94a3b8', fontSize: '1rem' }}>📱</span>
+                      <span style={{ position: 'absolute', left: 14, top: 13, color: '#94a3b8', fontSize: '1rem' }}>👤</span>
                     </div>
                   </div>
 
@@ -297,7 +294,7 @@ export default function LoginPage() {
                       opacity: isLoading ? 0.7 : 1
                     }}
                   >
-                    {isLoading ? 'ĐANG XÁC THỰC...' : 'ĐĂNG NHẬP'}
+                    {isLoading ? 'ĐANG XÁC THỰC...' : 'ĐĂNG NHẬP HỆ THỐNG'}
                   </button>
                 </form>
               )}
@@ -305,6 +302,7 @@ export default function LoginPage() {
               {/* TAB 2: SIGN UP FORM */}
               {activeTab === 'signup' && (
                 <form onSubmit={handleSignUp} style={{ width: '100%' }}>
+                  
                   <div className="clean-form-group" style={{ marginBottom: 16, width: '100%' }}>
                     <label className="clean-form-label" style={{ fontWeight: 700, fontSize: '0.8rem', color: '#475569', display: 'block', marginBottom: 6 }}>
                       Họ và tên quý khách <span>*</span>

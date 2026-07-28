@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signIn: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  signIn: (emailOrUsername: string, pass: string) => Promise<{ success: boolean; error?: string; isAdmin?: boolean }>;
   signUp: (email: string, pass: string, fullname: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   isAdmin: boolean;
@@ -18,19 +18,19 @@ function translateSupabaseError(msg: string): string {
   const lower = msg.toLowerCase();
   
   if (lower.includes('rate limit')) {
-    return 'Hệ thống gửi thư đang bận (giới hạn tần suất). Vui lòng chờ 2 - 3 phút hoặc sử dụng tài khoản có sẵn.';
+    return 'Hệ thống gửi thư đang bận. Vui lòng chờ 2 - 3 phút hoặc sử dụng tài khoản có sẵn.';
   }
   if (lower.includes('invalid login credentials')) {
-    return 'Tài khoản hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại.';
+    return 'Tên đăng nhập / Email hoặc Mật khẩu không chính xác. Vui lòng kiểm tra lại.';
   }
   if (lower.includes('user already registered') || lower.includes('already exists')) {
-    return 'Địa chỉ Email / Số điện thoại này đã được đăng ký tài khoản trước đó.';
+    return 'Địa chỉ Email này đã được đăng ký tài khoản khách hàng trước đó.';
   }
   if (lower.includes('password should be at least')) {
     return 'Mật khẩu phải chứa ít nhất 6 ký tự.';
   }
   if (lower.includes('email address') && lower.includes('invalid')) {
-    return 'Định dạng Email không hợp lệ. Vui lòng nhập Email đúng chuẩn (ví dụ: laidaivuong@gmail.com).';
+    return 'Định dạng Email không hợp lệ. Vui lòng nhập Email đúng chuẩn (ví dụ: khachhang@gmail.com).';
   }
   return 'Lỗi hệ thống: ' + msg;
 }
@@ -45,19 +45,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const email = sessionUser.email || '';
     const metadata = sessionUser.user_metadata || {};
     const fullname = metadata.fullname || email.split('@')[0] || 'Khách Hàng VIP';
-    const role = (metadata.role || (email.toLowerCase().includes('admin') ? 'admin' : 'user')) as 'admin' | 'user';
 
     return {
       id: sessionUser.id,
       email,
       fullname,
-      role,
+      role: 'user', // All public Supabase auth users are strictly 'user'
       avatar: fullname.charAt(0).toUpperCase(),
     };
   };
 
   useEffect(() => {
-    // 1. Check local session storage first
+    // 1. Check local persistent user session
     try {
       const local = localStorage.getItem('tiemlua_user');
       if (local) {
@@ -71,8 +70,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         const mapped = mapSupabaseUser(session.user);
-        setUser(mapped);
-        localStorage.setItem('tiemlua_user', JSON.stringify(mapped));
+        // Only set if not already logged in as master admin
+        setUser(current => (current?.role === 'admin' ? current : mapped));
       }
       setLoading(false);
     });
@@ -81,8 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         const mapped = mapSupabaseUser(session.user);
-        setUser(mapped);
-        localStorage.setItem('tiemlua_user', JSON.stringify(mapped));
+        setUser(current => (current?.role === 'admin' ? current : mapped));
       }
       setLoading(false);
     });
@@ -92,43 +90,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const signIn = async (email: string, pass: string) => {
+  const signIn = async (emailOrUsername: string, pass: string) => {
+    const cleanInput = emailOrUsername.trim().toLowerCase();
+
+    // 🔒 1. DEDICATED MASTER ADMIN ACCOUNT CHECK
+    if ((cleanInput === 'admin' || cleanInput === 'admin@tiemlua.com') && pass === 'admin') {
+      const masterAdmin: User = {
+        id: 'master-admin-id',
+        email: 'admin@tiemlua.com',
+        fullname: 'Lại Đại Vương',
+        role: 'admin',
+        avatar: 'L'
+      };
+      setUser(masterAdmin);
+      localStorage.setItem('tiemlua_user', JSON.stringify(masterAdmin));
+      return { success: true, isAdmin: true };
+    }
+
+    // 2. REGULAR USER SIGN IN VIA SUPABASE AUTH
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: emailOrUsername,
         password: pass,
       });
 
       if (error) {
-        // Fallback for admin if cloud rate limited
-        if (email.toLowerCase().includes('admin')) {
-          const fallbackUser: User = {
-            id: 'admin-local-' + Date.now(),
-            email,
-            fullname: 'Lại Đại Vương',
-            role: 'admin',
-            avatar: 'L'
-          };
-          setUser(fallbackUser);
-          localStorage.setItem('tiemlua_user', JSON.stringify(fallbackUser));
-          return { success: true };
-        }
         return { success: false, error: translateSupabaseError(error.message) };
       }
 
       if (data?.user) {
         const mapped = mapSupabaseUser(data.user);
+        mapped.role = 'user'; // Strictly 'user' role for public logins
         setUser(mapped);
         localStorage.setItem('tiemlua_user', JSON.stringify(mapped));
       }
 
-      return { success: true };
+      return { success: true, isAdmin: false };
     } catch (err: any) {
       return { success: false, error: translateSupabaseError(err?.message || '') };
     }
   };
 
   const signUp = async (email: string, pass: string, fullname: string) => {
+    // 🔒 SECURITY RULE: Public sign-ups are STRICTLY 'user' role ONLY!
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -136,7 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         options: {
           data: {
             fullname,
-            role: email.toLowerCase().includes('admin') ? 'admin' : 'user',
+            role: 'user', // STRICTLY USER ROLE ONLY
           },
         },
       });
@@ -144,12 +148,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) {
         const isRateLimit = error.message.toLowerCase().includes('rate limit') || error.message.toLowerCase().includes('invalid');
         if (isRateLimit) {
-          const isAdm = email.toLowerCase().includes('admin');
           const fallbackUser: User = {
             id: 'user-' + Date.now(),
             email,
-            fullname: fullname || (isAdm ? 'Lại Đại Vương' : 'Khách Hàng VIP'),
-            role: isAdm ? 'admin' : 'user',
+            fullname: fullname || 'Khách Hàng VIP',
+            role: 'user', // STRICTLY USER ROLE ONLY
             avatar: (fullname || email).charAt(0).toUpperCase()
           };
           setUser(fallbackUser);
@@ -161,6 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (data?.user) {
         const mapped = mapSupabaseUser(data.user);
+        mapped.role = 'user'; // STRICTLY USER ROLE ONLY
         setUser(mapped);
         localStorage.setItem('tiemlua_user', JSON.stringify(mapped));
       }
