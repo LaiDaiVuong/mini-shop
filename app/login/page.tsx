@@ -37,7 +37,7 @@ export default function LoginPage() {
     setIsLoading(false);
 
     if (!res.success) {
-      setErrorMsg(res.error || 'Đăng nhập không thành công. Vui lòng kiểm tra lại Email và Mật khẩu.');
+      setErrorMsg(res.error || 'Đăng nhập không thành công. Vui lòng kiểm tra lại Email / Số điện thoại và Mật khẩu.');
     } else {
       setSuccessMsg('Đăng nhập thành công! Đang chuyển hướng...');
       setTimeout(() => {
@@ -67,9 +67,9 @@ export default function LoginPage() {
     setIsLoading(false);
 
     if (!res.success) {
-      setErrorMsg(res.error || 'Đăng ký không thành công. Email này có thể đã được sử dụng.');
+      setErrorMsg(res.error || 'Đăng ký không thành công. Thông tin này có thể đã được đăng ký.');
     } else {
-      setSuccessMsg('Đăng ký tài khoản Supabase thành công! Bạn đã tự động đăng nhập.');
+      setSuccessMsg('Đăng ký tài khoản Tiệm Lửa thành công! Bạn đã tự động đăng nhập.');
       setTimeout(() => {
         if (regEmail.includes('admin')) {
           router.push('/admin');
@@ -82,13 +82,13 @@ export default function LoginPage() {
 
   return (
     <>
-      {/* Compact Page Banner */}
-      <section className="page-banner" style={{ padding: '35px 0 20px' }}>
+      {/* Page Banner Section - Fixed Top Padding to Prevent Header Overlap */}
+      <section className="page-banner" style={{ paddingTop: '105px', paddingBottom: '20px' }}>
         <div className="container">
           <div className="breadcrumb">
             <Link href="/">Trang Chủ</Link>
             <span>&rsaquo;</span>
-            <span className="active-crumb">Tài Khoản Supabase Live</span>
+            <span className="active-crumb">Tài Khoản Tiệm Lửa</span>
           </div>
         </div>
       </section>
@@ -137,15 +137,15 @@ export default function LoginPage() {
 
               <div>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'rgba(197, 160, 89, 0.2)', border: '1px solid var(--color-accent)', padding: '6px 16px', borderRadius: 30, color: 'var(--color-accent)', fontSize: '0.75rem', fontWeight: 800, letterSpacing: 1.5, marginBottom: 24 }}>
-                  ⚡ SUPABASE AUTHENTICATION
+                  ⚡ THÀNH VIÊN VIP TIỆM LỬA
                 </div>
 
                 <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '2rem', fontWeight: 800, color: '#fff', lineHeight: 1.3, marginBottom: 16 }}>
-                  XÁC THỰC THỰC THẾ SUPABASE
+                  ĐẲNG CẤP BẬT LỬA QUÝ ÔNG
                 </h2>
 
                 <p style={{ color: '#cbd5e1', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: 30 }}>
-                  Tài khoản đăng ký và đăng nhập được mã hóa & lưu trữ trực tiếp trên hệ thống Supabase Auth đám mây an toàn tuyệt đối.
+                  Đăng nhập tài khoản để nhận chính sách bảo hành trọn đời, căn chỉnh âm Pinh miễn phí & theo dõi đơn hàng dễ dàng.
                 </p>
 
                 {/* Hero Showcase Image */}
@@ -168,8 +168,8 @@ export default function LoginPage() {
                   "Tiếng Pinh ngân vang — Khẳng định vị thế thượng lưu."
                 </div>
                 <div style={{ display: 'flex', gap: 20, fontSize: '0.75rem', color: '#94a3b8' }}>
-                  <span>🔒 Supabase Auth Password Hash</span>
-                  <span>⚡ Session Persistence</span>
+                  <span>🔒 Bảo mật thông tin mã hóa 256-bit</span>
+                  <span>⚡ Hỗ trợ 24/7</span>
                 </div>
               </div>
 
@@ -179,7 +179,7 @@ export default function LoginPage() {
             <div style={{ padding: '48px 40px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               
               {/* Tab Switcher: Đăng Nhập vs. Đăng Ký */}
-              <div style={{ display: 'flex', background: '#f1f5f9', padding: 4, borderRadius: 12, border: '1px solid #e2e8f0', marginBottom: 24 }}>
+              <div style={{ display: 'flex', background: '#f1f5f9', padding: 4, borderRadius: 12, border: '1px solid #e2e8f0', marginBottom: 24, width: '100%' }}>
                 <button
                   type="button"
                   onClick={() => { setActiveTab('signin'); setErrorMsg(''); setSuccessMsg(''); }}
@@ -222,52 +222,52 @@ export default function LoginPage() {
 
               {/* Alert Messages */}
               {errorMsg && (
-                <div style={{ padding: '12px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, color: '#dc2626', fontSize: '0.825rem', fontWeight: 600, marginBottom: 18 }}>
+                <div style={{ padding: '12px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, color: '#dc2626', fontSize: '0.825rem', fontWeight: 600, marginBottom: 18, width: '100%' }}>
                   ⚠️ {errorMsg}
                 </div>
               )}
               {successMsg && (
-                <div style={{ padding: '12px 16px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, color: '#166534', fontSize: '0.825rem', fontWeight: 600, marginBottom: 18 }}>
+                <div style={{ padding: '12px 16px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, color: '#166534', fontSize: '0.825rem', fontWeight: 600, marginBottom: 18, width: '100%' }}>
                   ✓ {successMsg}
                 </div>
               )}
 
               {/* TAB 1: SIGN IN FORM */}
               {activeTab === 'signin' && (
-                <form onSubmit={handleSignIn}>
-                  <div className="clean-form-group" style={{ marginBottom: 18 }}>
-                    <label className="clean-form-label" style={{ fontWeight: 700, fontSize: '0.8rem', color: '#475569' }}>
-                      Địa chỉ Email <span>*</span>
+                <form onSubmit={handleSignIn} style={{ width: '100%' }}>
+                  <div className="clean-form-group" style={{ marginBottom: 18, width: '100%' }}>
+                    <label className="clean-form-label" style={{ fontWeight: 700, fontSize: '0.8rem', color: '#475569', display: 'block', marginBottom: 6 }}>
+                      Email / Số điện thoại <span>*</span>
                     </label>
-                    <div style={{ position: 'relative' }}>
+                    <div style={{ position: 'relative', width: '100%' }}>
                       <input 
-                        type="email" 
+                        type="text" 
                         className="clean-form-input" 
-                        placeholder="Ví dụ: khachhang@gmail.com" 
+                        placeholder="Nhập Email hoặc Số điện thoại" 
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required 
-                        style={{ paddingLeft: 40, height: 48, borderRadius: 10 }}
+                        style={{ width: '100%', boxSizing: 'border-box', paddingLeft: 42, paddingRight: 16, height: 48, borderRadius: 10, border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
                       />
-                      <span style={{ position: 'absolute', left: 14, top: 14, color: '#94a3b8', fontSize: '1rem' }}>✉️</span>
+                      <span style={{ position: 'absolute', left: 14, top: 13, color: '#94a3b8', fontSize: '1rem' }}>📱</span>
                     </div>
                   </div>
 
-                  <div className="clean-form-group" style={{ marginBottom: 20 }}>
-                    <label className="clean-form-label" style={{ fontWeight: 700, fontSize: '0.8rem', color: '#475569' }}>
+                  <div className="clean-form-group" style={{ marginBottom: 20, width: '100%' }}>
+                    <label className="clean-form-label" style={{ fontWeight: 700, fontSize: '0.8rem', color: '#475569', display: 'block', marginBottom: 6 }}>
                       Mật khẩu <span>*</span>
                     </label>
-                    <div style={{ position: 'relative' }}>
+                    <div style={{ position: 'relative', width: '100%' }}>
                       <input 
                         type={showPassword ? 'text' : 'password'} 
                         className="clean-form-input" 
-                        placeholder="Nhập mật khẩu Supabase" 
+                        placeholder="Nhập mật khẩu" 
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required 
-                        style={{ paddingLeft: 40, paddingRight: 40, height: 48, borderRadius: 10 }}
+                        style={{ width: '100%', boxSizing: 'border-box', paddingLeft: 42, paddingRight: 42, height: 48, borderRadius: 10, border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
                       />
-                      <span style={{ position: 'absolute', left: 14, top: 14, color: '#94a3b8', fontSize: '1rem' }}>🔑</span>
+                      <span style={{ position: 'absolute', left: 14, top: 13, color: '#94a3b8', fontSize: '1rem' }}>🔑</span>
                       <button 
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
@@ -297,19 +297,19 @@ export default function LoginPage() {
                       opacity: isLoading ? 0.7 : 1
                     }}
                   >
-                    {isLoading ? 'ĐANG ĐĂNG NHẬP SUPABASE...' : 'ĐĂNG NHẬP SUPABASE'}
+                    {isLoading ? 'ĐANG XÁC THỰC...' : 'ĐĂNG NHẬP'}
                   </button>
                 </form>
               )}
 
               {/* TAB 2: SIGN UP FORM */}
               {activeTab === 'signup' && (
-                <form onSubmit={handleSignUp}>
-                  <div className="clean-form-group" style={{ marginBottom: 16 }}>
-                    <label className="clean-form-label" style={{ fontWeight: 700, fontSize: '0.8rem', color: '#475569' }}>
+                <form onSubmit={handleSignUp} style={{ width: '100%' }}>
+                  <div className="clean-form-group" style={{ marginBottom: 16, width: '100%' }}>
+                    <label className="clean-form-label" style={{ fontWeight: 700, fontSize: '0.8rem', color: '#475569', display: 'block', marginBottom: 6 }}>
                       Họ và tên quý khách <span>*</span>
                     </label>
-                    <div style={{ position: 'relative' }}>
+                    <div style={{ position: 'relative', width: '100%' }}>
                       <input 
                         type="text" 
                         className="clean-form-input" 
@@ -317,50 +317,50 @@ export default function LoginPage() {
                         value={regFullname}
                         onChange={(e) => setRegFullname(e.target.value)}
                         required 
-                        style={{ paddingLeft: 40, height: 46, borderRadius: 10 }}
+                        style={{ width: '100%', boxSizing: 'border-box', paddingLeft: 42, paddingRight: 16, height: 48, borderRadius: 10, border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
                       />
                       <span style={{ position: 'absolute', left: 14, top: 13, color: '#94a3b8', fontSize: '1rem' }}>👤</span>
                     </div>
                   </div>
 
-                  <div className="clean-form-group" style={{ marginBottom: 16 }}>
-                    <label className="clean-form-label" style={{ fontWeight: 700, fontSize: '0.8rem', color: '#475569' }}>
-                      Địa chỉ Email <span>*</span>
+                  <div className="clean-form-group" style={{ marginBottom: 16, width: '100%' }}>
+                    <label className="clean-form-label" style={{ fontWeight: 700, fontSize: '0.8rem', color: '#475569', display: 'block', marginBottom: 6 }}>
+                      Email / Số điện thoại <span>*</span>
                     </label>
-                    <div style={{ position: 'relative' }}>
+                    <div style={{ position: 'relative', width: '100%' }}>
                       <input 
-                        type="email" 
+                        type="text" 
                         className="clean-form-input" 
-                        placeholder="Ví dụ: hung.nguyen@gmail.com" 
+                        placeholder="Nhập Email hoặc Số điện thoại" 
                         value={regEmail}
                         onChange={(e) => setRegEmail(e.target.value)}
                         required 
-                        style={{ paddingLeft: 40, height: 46, borderRadius: 10 }}
+                        style={{ width: '100%', boxSizing: 'border-box', paddingLeft: 42, paddingRight: 16, height: 48, borderRadius: 10, border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
                       />
-                      <span style={{ position: 'absolute', left: 14, top: 13, color: '#94a3b8', fontSize: '1rem' }}>✉️</span>
+                      <span style={{ position: 'absolute', left: 14, top: 13, color: '#94a3b8', fontSize: '1rem' }}>📱</span>
                     </div>
                   </div>
 
-                  <div className="clean-form-group" style={{ marginBottom: 20 }}>
-                    <label className="clean-form-label" style={{ fontWeight: 700, fontSize: '0.8rem', color: '#475569' }}>
+                  <div className="clean-form-group" style={{ marginBottom: 20, width: '100%' }}>
+                    <label className="clean-form-label" style={{ fontWeight: 700, fontSize: '0.8rem', color: '#475569', display: 'block', marginBottom: 6 }}>
                       Mật khẩu (Tối thiểu 6 ký tự) <span>*</span>
                     </label>
-                    <div style={{ position: 'relative' }}>
+                    <div style={{ position: 'relative', width: '100%' }}>
                       <input 
                         type={showPassword ? 'text' : 'password'} 
                         className="clean-form-input" 
-                        placeholder="Nhập mật khẩu an toàn" 
+                        placeholder="Nhập mật khẩu" 
                         value={regPassword}
                         onChange={(e) => setRegPassword(e.target.value)}
                         required 
                         minLength={6}
-                        style={{ paddingLeft: 40, paddingRight: 40, height: 46, borderRadius: 10 }}
+                        style={{ width: '100%', boxSizing: 'border-box', paddingLeft: 42, paddingRight: 42, height: 48, borderRadius: 10, border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
                       />
                       <span style={{ position: 'absolute', left: 14, top: 13, color: '#94a3b8', fontSize: '1rem' }}>🔑</span>
                       <button 
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        style={{ position: 'absolute', right: 12, top: 11, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '1.1rem' }}
+                        style={{ position: 'absolute', right: 12, top: 12, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '1.1rem' }}
                       >
                         {showPassword ? '👁️' : '🙈'}
                       </button>
@@ -386,7 +386,7 @@ export default function LoginPage() {
                       opacity: isLoading ? 0.7 : 1
                     }}
                   >
-                    {isLoading ? 'ĐANG TẠO TÀI KHOẢN SUPABASE...' : 'TẠO TÀI KHOẢN MỚI'}
+                    {isLoading ? 'ĐANG TẠO TÀI KHOẢN...' : 'TẠO TÀI KHOẢN MỚI'}
                   </button>
                 </form>
               )}

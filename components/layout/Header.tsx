@@ -78,7 +78,7 @@ export const Header: React.FC = () => {
                     }}>
                       {user.avatar || user.fullname.charAt(0).toUpperCase()}
                     </div>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text-main)', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'currentColor', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {user.fullname}
                     </span>
                   </div>
@@ -118,13 +118,13 @@ export const Header: React.FC = () => {
                           onClick={() => { logout(); setShowUserDropdown(false); }}
                           style={{ textAlign: 'left', fontSize: '0.825rem', color: '#ef4444', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                         >
-                          🚪 Đăng Xuất Supabase
+                          🚪 Đăng Xuất
                         </button>
                       </div>
                     </>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Tài Khoản Supabase Live</div>
+                      <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Tài Khoản Tiệm Lửa VIP</div>
                       <Link 
                         href="/login" 
                         onClick={() => setShowUserDropdown(false)} 
