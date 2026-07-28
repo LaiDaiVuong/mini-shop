@@ -590,13 +590,13 @@ export default function AdminDashboardPage() {
                             style={{ cursor: 'pointer', width: 16, height: 16 }}
                           />
                         </th>
-                        <th style={{ padding: 14, width: 80 }}>Hình Ảnh</th>
-                        <th style={{ padding: 14 }}>Tên Sản Phẩm & Mã</th>
-                        <th style={{ padding: 14 }}>Danh Mục</th>
-                        <th style={{ padding: 14 }}>Giá Bán</th>
-                        <th style={{ padding: 14 }}>Tồn Kho</th>
-                        <th style={{ padding: 14 }}>Huy Hiệu</th>
-                        <th style={{ padding: 14, textAlign: 'center', width: 70 }}>Hành Động</th>
+                        <th style={{ padding: 14, width: 75 }}>Hình Ảnh</th>
+                        <th style={{ padding: 14, maxWidth: 220, width: 220 }}>Tên Sản Phẩm & Mã</th>
+                        <th style={{ padding: 14, whiteSpace: 'nowrap' }}>Danh Mục</th>
+                        <th style={{ padding: 14, whiteSpace: 'nowrap' }}>Giá Bán</th>
+                        <th style={{ padding: 14, whiteSpace: 'nowrap', minWidth: 115 }}>Tồn Kho</th>
+                        <th style={{ padding: 14, whiteSpace: 'nowrap', minWidth: 115 }}>Huy Hiệu</th>
+                        <th style={{ padding: 14, textAlign: 'center', width: 70, whiteSpace: 'nowrap' }}>Hành Động</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -647,26 +647,26 @@ export default function AdminDashboardPage() {
                                 />
                               </td>
 
-                              {/* Name & ID */}
-                              <td style={{ padding: 14 }}>
-                                <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.9rem', marginBottom: 2 }}>{p.name}</div>
+                              {/* Name & ID (Max 220px) */}
+                              <td style={{ padding: 14, maxWidth: 220 }}>
+                                <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.875rem', marginBottom: 2, lineHeight: 1.3 }}>{p.name}</div>
                                 <div style={{ fontSize: '0.725rem', color: '#94a3b8', fontFamily: 'monospace' }}>#{p.id}</div>
                               </td>
 
                               {/* Category */}
-                              <td style={{ padding: 14, color: '#475569', fontWeight: 600 }}>
+                              <td style={{ padding: 14, color: '#475569', fontWeight: 600, whiteSpace: 'nowrap' }}>
                                 {p.categoryName}
                               </td>
 
                               {/* Price */}
-                              <td style={{ padding: 14, fontWeight: 800, color: '#C89B3C', fontSize: '0.95rem' }}>
+                              <td style={{ padding: 14, fontWeight: 800, color: '#C89B3C', fontSize: '0.95rem', whiteSpace: 'nowrap' }}>
                                 {p.price}
                               </td>
 
-                              {/* Inventory Status Pill */}
-                              <td style={{ padding: 14 }}>
+                              {/* Inventory Status Pill (No Wrap) */}
+                              <td style={{ padding: 14, whiteSpace: 'nowrap', minWidth: 115 }}>
                                 <span style={{
-                                  padding: '3px 8px',
+                                  padding: '4px 10px',
                                   borderRadius: 20,
                                   fontSize: '0.675rem',
                                   fontWeight: 800,
@@ -675,22 +675,27 @@ export default function AdminDashboardPage() {
                                   border: '1px solid currentColor',
                                   display: 'inline-flex',
                                   alignItems: 'center',
-                                  gap: 4
+                                  gap: 4,
+                                  whiteSpace: 'nowrap'
                                 }}>
                                   ● {isOut ? 'Hết hàng' : isLow ? 'Sắp hết' : 'Còn hàng'}
                                 </span>
                               </td>
 
-                              {/* Badge Pill */}
-                              <td style={{ padding: 14 }}>
+                              {/* Badge Pill (No Wrap) */}
+                              <td style={{ padding: 14, whiteSpace: 'nowrap', minWidth: 115 }}>
                                 <span style={{ 
-                                  padding: '3px 8px',
+                                  padding: '4px 10px',
                                   borderRadius: 20,
                                   fontSize: '0.675rem',
                                   fontWeight: 800,
                                   background: '#fffbeb',
                                   color: '#C89B3C',
-                                  border: '1px solid #fde68a'
+                                  border: '1px solid #fde68a',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  whiteSpace: 'nowrap'
                                 }}>
                                   ✨ {p.badge || 'Luxury'}
                                 </span>
