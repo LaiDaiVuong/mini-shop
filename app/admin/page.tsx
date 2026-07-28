@@ -34,7 +34,7 @@ export default function AdminDashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  // Load live data from Supabase DB on mount
+  // Load live data from DB on mount
   const loadSupabaseData = async () => {
     setIsLoadingData(true);
     try {
@@ -50,14 +50,13 @@ export default function AdminDashboardPage() {
       if (ordersData && ordersData.length > 0) {
         setOrders(ordersData);
       } else {
-        // Fallback to local storage or mock orders if no live orders yet
         const localOrders = localStorage.getItem('tiemlua_orders');
         if (localOrders) {
           setOrders(JSON.parse(localOrders));
         }
       }
     } catch (err) {
-      console.error('Error loading Supabase admin data:', err);
+      console.error('Error loading admin data:', err);
     } finally {
       setIsLoadingData(false);
     }
@@ -67,14 +66,11 @@ export default function AdminDashboardPage() {
     loadSupabaseData();
   }, []);
 
-  // Save product (Add or Edit) directly to Supabase
+  // Save product (Add or Edit) directly to DB
   const handleSaveProduct = async (prod: Product) => {
     const isEditing = !!editingProduct;
 
-    // Save to Supabase
     await saveProductToSupabase(prod, isEditing);
-
-    // Update local state and refetch from Supabase
     await loadSupabaseData();
     setIsModalOpen(false);
     setEditingProduct(null);
@@ -82,17 +78,16 @@ export default function AdminDashboardPage() {
 
   // Delete product with confirmation dialog
   const handleDeleteProduct = async (id: string) => {
-    if (confirm('⚠️ CẢNH BÁO: Bạn có chắc chắn muốn xóa sản phẩm này khỏi hệ thống kho Supabase? Thao tác này không thể hoàn tác.')) {
+    if (confirm('⚠️ CẢNH BÁO: Bạn có chắc chắn muốn xóa sản phẩm này khỏi hệ thống? Thao tác này không thể hoàn tác.')) {
       await deleteProductFromSupabase(id);
       await loadSupabaseData();
     }
   };
 
-  // Update order status directly in Supabase
+  // Update order status directly in DB
   const handleUpdateOrderStatus = async (orderId: string, newStatus: Order['status']) => {
     await updateOrderStatusInSupabase(orderId, newStatus);
     
-    // Update state locally
     const updated = orders.map(ord => ord.id === orderId ? { ...ord, status: newStatus } : ord);
     setOrders(updated);
     localStorage.setItem('tiemlua_orders', JSON.stringify(updated));
@@ -115,7 +110,7 @@ export default function AdminDashboardPage() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc' }}>
       
-      {/* LEFT SIDEBAR NAVIGATION MENU (Sidebar Bên Trái) */}
+      {/* LEFT SIDEBAR NAVIGATION MENU */}
       <aside 
         style={{ 
           width: 275, 
@@ -139,7 +134,7 @@ export default function AdminDashboardPage() {
             <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1.15rem', fontWeight: 800, letterSpacing: 1.5, color: '#fff' }}>
               TIỆM LỬA <span style={{ color: 'var(--color-accent)' }}>ADMIN</span>
             </div>
-            <div style={{ fontSize: '0.725rem', color: '#94a3b8', marginTop: 2 }}>Hệ Thống Quản Trị VI</div>
+            <div style={{ fontSize: '0.725rem', color: '#94a3b8', marginTop: 2 }}>Hệ Thống Quản Trị</div>
           </div>
         </div>
 
@@ -150,7 +145,7 @@ export default function AdminDashboardPage() {
             { id: 'products', icon: '📦', label: 'Quản Lý Sản Phẩm', badge: products.length },
             { id: 'orders', icon: '🛒', label: 'Quản Lý Đơn Hàng', badge: pendingCount ? `${pendingCount} Mới` : undefined, badgeColor: '#ef4444' },
             { id: 'users', icon: '👥', label: 'Quản Lý Khách Hàng' },
-            { id: 'settings', icon: '⚙️', label: 'Cấu Hình Kho Supabase' },
+            { id: 'settings', icon: '⚙️', label: 'Cấu Hình Hệ Thống' },
           ].map(item => {
             const isActive = activeTab === item.id;
             return (
@@ -256,16 +251,16 @@ export default function AdminDashboardPage() {
               {activeTab === 'products' && '📦 Quản Lý Kho & Sản Phẩm'}
               {activeTab === 'orders' && '🛒 Quản Lý Đơn Đặt Hàng'}
               {activeTab === 'users' && '👥 Danh Sách Khách Hàng VIP'}
-              {activeTab === 'settings' && '⚙️ Cấu Hình Kết Nối Supabase'}
+              {activeTab === 'settings' && '⚙️ Cấu Hình Máy Chủ & Kết Nối'}
             </h1>
             <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: 2 }}>Trạm điều hành thương mại điện tử Tiệm Lửa</div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            {/* Supabase Status Pill */}
+            {/* Status Pill */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '6px 14px', borderRadius: 20, fontSize: '0.775rem', fontWeight: 700, color: '#059669' }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }}></span>
-              Supabase Live Connection
+              Hệ Thống Trực Tuyến
             </div>
 
             {activeTab === 'products' && (
@@ -302,7 +297,7 @@ export default function AdminDashboardPage() {
                 <div style={{ background: '#fff', padding: 22, borderRadius: 16, border: '1px solid #e2e8f0', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
                   <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700, letterSpacing: 0.5 }}>SẢN PHẨM NIÊM YẾT</div>
                   <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', margin: '6px 0' }}>{products.length} Món</div>
-                  <div style={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 700 }}>Đang mở bán trên Supabase</div>
+                  <div style={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 700 }}>Đang mở bán trên hệ thống</div>
                 </div>
 
                 <div style={{ background: '#fff', padding: 22, borderRadius: 16, border: '1px solid #e2e8f0', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
@@ -330,8 +325,8 @@ export default function AdminDashboardPage() {
             <div style={{ background: '#fff', padding: 24, borderRadius: 16, border: '1px solid #e2e8f0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 16 }}>
                 <div>
-                  <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>Danh Sách Sản Phẩm Niêm Yết (Kho Supabase Live)</h2>
-                  <p style={{ fontSize: '0.85rem', color: '#64748b' }}>Thêm, sửa, xóa sản phẩm trực tiếp với kho dữ liệu</p>
+                  <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>Danh Sách Sản Phẩm Niêm Yết</h2>
+                  <p style={{ fontSize: '0.85rem', color: '#64748b' }}>Thêm, sửa, xóa sản phẩm trực tiếp trong kho hàng</p>
                 </div>
 
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
@@ -361,7 +356,7 @@ export default function AdminDashboardPage() {
                       <th style={{ padding: 12 }}>Danh mục</th>
                       <th style={{ padding: 12 }}>Giá bán</th>
                       <th style={{ padding: 12 }}>Nhãn Badge</th>
-                      <th style={{ padding: 12, textAlign: 'right' }}>Thao tác</th>
+                      <th style={{ padding: 12, textAlign: 'right', whiteSpace: 'nowrap', width: 160 }}>Thao tác</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -376,19 +371,21 @@ export default function AdminDashboardPage() {
                         <td style={{ padding: 12 }}>
                           <span className="badge-tag badge-gold" style={{ fontSize: '0.75rem' }}>{p.badge || 'Luxury'}</span>
                         </td>
-                        <td style={{ padding: 12, textAlign: 'right' }}>
-                          <button 
-                            onClick={() => { setEditingProduct(p); setIsModalOpen(true); }}
-                            style={{ padding: '6px 12px', background: '#3b82f6', color: '#fff', borderRadius: 6, fontWeight: 700, fontSize: '0.775rem', marginRight: 8, border: 'none', cursor: 'pointer' }}
-                          >
-                            ⚡ Sửa
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteProduct(p.id)}
-                            style={{ padding: '6px 12px', background: '#ef4444', color: '#fff', borderRadius: 6, fontWeight: 700, fontSize: '0.775rem', border: 'none', cursor: 'pointer' }}
-                          >
-                            🗑️ Xóa
-                          </button>
+                        <td style={{ padding: 12, textAlign: 'right', whiteSpace: 'nowrap', width: 160 }}>
+                          <div style={{ display: 'inline-flex', gap: 6, justifyContent: 'flex-end' }}>
+                            <button 
+                              onClick={() => { setEditingProduct(p); setIsModalOpen(true); }}
+                              style={{ padding: '6px 12px', background: '#3b82f6', color: '#fff', borderRadius: 6, fontWeight: 700, fontSize: '0.775rem', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            >
+                              ⚡ Sửa
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteProduct(p.id)}
+                              style={{ padding: '6px 12px', background: '#ef4444', color: '#fff', borderRadius: 6, fontWeight: 700, fontSize: '0.775rem', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            >
+                              🗑️ Xóa
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -403,7 +400,7 @@ export default function AdminDashboardPage() {
             <div style={{ background: '#fff', padding: 24, borderRadius: 16, border: '1px solid #e2e8f0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 16 }}>
                 <div>
-                  <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>Quản Lý Đơn Đặt Hàng (Kho Supabase Live)</h2>
+                  <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>Quản Lý Đơn Đặt Hàng</h2>
                   <p style={{ fontSize: '0.85rem', color: '#64748b' }}>Cập nhật trạng thái đơn từ Mới sang Đang giao, Đã giao</p>
                 </div>
 
@@ -544,17 +541,17 @@ export default function AdminDashboardPage() {
           {/* TAB 5: SETTINGS */}
           {activeTab === 'settings' && (
             <div style={{ background: '#fff', padding: 24, borderRadius: 16, border: '1px solid #e2e8f0', maxWidth: 650 }}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', marginBottom: 6 }}>⚙️ Cấu Hình Kết Nối Supabase Live</h2>
-              <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: 20 }}>Thông tin kho dữ liệu đám mây đang kết nối</p>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', marginBottom: 6 }}>⚙️ Cấu Hình Máy Chủ & Kết Nối</h2>
+              <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: 20 }}>Thông tin kết nối đám mây của cửa hàng</p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>SUPABASE ENDPOINT URL</label>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>ENDPOINT SERVER URL</label>
                   <input type="text" readOnly value="https://lnwltbvlifrhyrpwtmmf.supabase.co" style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: 600, color: '#334155', fontSize: '0.875rem' }} />
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>SUPABASE ANON / PUBLISHABLE KEY</label>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>API PUBLISHABLE KEY</label>
                   <input type="text" readOnly value="sb_publishable_nkefygNGjpLMtEsPv127jQ_yJakszuM" style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: 600, color: '#334155', fontSize: '0.875rem' }} />
                 </div>
 
