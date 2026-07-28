@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { AppProviders } from '@/context/AppProviders';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
+import { MainLayoutWrapper } from '@/components/layout/MainLayoutWrapper';
 
 export const metadata: Metadata = {
   title: 'Tiệm Lửa | Bật Lửa S.T. Dupont, Rowenta R10 & Dupont HongKong Luxury',
@@ -18,11 +17,9 @@ export default function RootLayout({
     <html lang="vi">
       <body>
         <AppProviders>
-          <Header />
-          <main style={{ minHeight: '80vh' }}>
+          <MainLayoutWrapper>
             {children}
-          </main>
-          <Footer />
+          </MainLayoutWrapper>
         </AppProviders>
       </body>
     </html>
