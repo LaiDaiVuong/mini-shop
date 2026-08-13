@@ -1,18 +1,25 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { INITIAL_PRODUCTS_DATA } from '@/lib/products-data';
 import { fetchProductsFromSupabase } from '@/lib/supabase';
 import { Product } from '@/lib/types';
 import { ProductCard } from '@/components/product/ProductCard';
 
-export default function ProductsPage() {
+function ProductsContent() {
   const [productsList, setProductsList] = useState<Product[]>(INITIAL_PRODUCTS_DATA);
-  const [search, setSearch] = useState('');
+  const searchParams = useSearchParams();
+  const initialSearch = searchParams?.get('search') || '';
+  const [search, setSearch] = useState(initialSearch);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [priceRange, setPriceRange] = useState('all');
   const [sortOption, setSortOption] = useState('newest');
+
+  useEffect(() => {
+    setSearch(initialSearch);
+  }, [initialSearch]);
 
   useEffect(() => {
     fetchProductsFromSupabase().then((data) => {
@@ -181,5 +188,17 @@ export default function ProductsPage() {
         </div>
       </section>
     </>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={
+      <div className="container" style={{ padding: '100px 20px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+        Đang tải danh sách sản phẩm...
+      </div>
+    }>
+      <ProductsContent />
+    </Suspense>
   );
 }

@@ -3002,8 +3002,45 @@ textarea::placeholder {
   border: 1px solid #e2e8f0 !important;
 }
 
+/* Custom Header Search Input Override */
+input.header-search-input {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  backdrop-filter: blur(8px) !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #ffffff !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
 
+input.header-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
 
+input.header-search-input.open {
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+}
 
+input.header-search-input:focus {
+  background-color: rgba(255, 255, 255, 0.25) !important;
+  border-color: rgba(255, 255, 255, 0.6) !important;
+}
 
+/* Scrolled Header Search Input Styling */
+.site-header.scrolled input.header-search-input {
+  background-color: rgba(15, 23, 42, 0.06) !important;
+  color: #0f172a !important;
+}
 
+.site-header.scrolled input.header-search-input::placeholder {
+  color: #64748b !important;
+}
+
+.site-header.scrolled input.header-search-input.open {
+  border: 1px solid rgba(15, 23, 42, 0.15) !important;
+}
+
+.site-header.scrolled input.header-search-input:focus {
+  background-color: rgba(15, 23, 42, 0.1) !important;
+  border-color: var(--color-accent) !important;
+  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.2) !important;
+}

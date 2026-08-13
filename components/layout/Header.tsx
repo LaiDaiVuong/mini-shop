@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { useAuth } from '@/context/AuthContext';
@@ -11,11 +11,24 @@ export const Header: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
   const { cartCount } = useCart();
   const { wishlistCount } = useWishlist();
   const { user, logout } = useAuth();
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+      setIsSearchOpen(false);
+      setIsMobileOpen(false);
+      setSearchQuery('');
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -50,6 +63,58 @@ export const Header: React.FC = () => {
           </nav>
           
           <div className="header-actions">
+            {/* Elegant Search Bar */}
+            <form onSubmit={handleSearchSubmit} style={{
+              display: 'flex',
+              alignItems: 'center',
+              position: 'relative',
+            }}>
+              <input 
+                type="text" 
+                className={`header-search-input ${isSearchOpen ? 'open' : ''}`}
+                placeholder="Tìm sản phẩm..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: isSearchOpen ? '180px' : '0px',
+                  opacity: isSearchOpen ? 1 : 0,
+                  padding: isSearchOpen ? '8px 36px 8px 12px' : '0px',
+                  borderRadius: '20px',
+                  fontSize: '0.8rem',
+                  outline: 'none',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}
+              />
+              <button 
+                type="button" 
+                className="action-btn" 
+                title="Tìm kiếm"
+                onClick={() => {
+                  if (isSearchOpen) {
+                    if (searchQuery.trim()) {
+                      router.push(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+                      setSearchQuery('');
+                      setIsSearchOpen(false);
+                    } else {
+                      setIsSearchOpen(false);
+                    }
+                  } else {
+                    setIsSearchOpen(true);
+                  }
+                }}
+                style={{
+                  position: isSearchOpen ? 'absolute' : 'static',
+                  right: isSearchOpen ? '2px' : 'auto',
+                  zIndex: 2,
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </button>
+            </form>
+
             <div style={{ position: 'relative' }}>
               <button 
                 className="action-btn" 
@@ -60,8 +125,7 @@ export const Header: React.FC = () => {
                 {user ? (
                   <div style={{
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: 8
+                    alignItems: 'center'
                   }}>
                     <div style={{
                       width: 32,
@@ -78,9 +142,6 @@ export const Header: React.FC = () => {
                     }}>
                       {user.avatar || user.fullname.charAt(0).toUpperCase()}
                     </div>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'currentColor', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {user.fullname.trim().split(/\s+/).pop() || user.fullname}
-                    </span>
                   </div>
                 ) : (
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
@@ -164,6 +225,37 @@ export const Header: React.FC = () => {
               <div className="brand-logo">TIỆM <span className="logo-accent">LỬA</span></div>
               <button className="drawer-close" onClick={() => setIsMobileOpen(false)}>&times;</button>
             </div>
+            {/* Search in Mobile Drawer */}
+            <form onSubmit={handleSearchSubmit} style={{ padding: '0 0 20px 0', display: 'flex', gap: 8, borderBottom: '1px solid var(--color-border)', marginBottom: 15 }}>
+              <input 
+                type="text" 
+                className="header-search-input open"
+                placeholder="Tìm sản phẩm..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  borderRadius: 8,
+                  fontSize: '0.85rem',
+                  outline: 'none'
+                }}
+              />
+              <button 
+                type="submit" 
+                style={{
+                  padding: '8px 16px',
+                  background: 'var(--color-accent)',
+                  color: '#fff',
+                  borderRadius: 8,
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Tìm
+              </button>
+            </form>
             <div className="mobile-nav-links" onClick={() => setIsMobileOpen(false)}>
               <Link href="/">Trang Chủ</Link>
               <Link href="/products">Tất Cả Sản Phẩm</Link>
