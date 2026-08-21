@@ -107,7 +107,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: true, isAdmin: true };
     }
 
-    // 2. REGULAR USER SIGN IN VIA SUPABASE AUTH
+    // 🔒 2. CHECK CUSTOM CREATED USERS IN PROFILES TABLE OR LOCAL STORAGE
+    try {
+      const { data: dbProfiles, error: dbError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', cleanInput);
+
+      let matchedUser: User | null = null;
+
+      if (!dbError && dbProfiles && dbProfiles.length > 0) {
+        const found = dbProfiles[0];
+        if (found.password && found.password === pass) {
+          matchedUser = {
+            id: found.id,
+            email: found.email,
+            fullname: found.fullname,
+            phone: found.phone || '',
+            role: found.role === 'admin' ? 'admin' : 'user',
+            avatar: (found.fullname || found.email).charAt(0).toUpperCase(),
+            status: found.status || 'active',
+            spent: Number(found.spent) || 0
+          };
+        }
+      }
+
+      // Check local storage fallback user list
+      if (!matchedUser && typeof window !== 'undefined') {
+        const localListStr = localStorage.getItem('tiemlua_users_list');
+        if (localListStr) {
+          const localList: User[] = JSON.parse(localListStr);
+          const found = localList.find(u => u.email.toLowerCase() === cleanInput && u.password === pass);
+          if (found) {
+            matchedUser = {
+              ...found,
+              avatar: (found.fullname || found.email).charAt(0).toUpperCase()
+            };
+          }
+        }
+      }
+
+      if (matchedUser) {
+        if (matchedUser.status === 'locked') {
+          return { success: false, error: 'Tài khoản của bạn đã bị khóa bởi quản trị viên!' };
+        }
+        setUser(matchedUser);
+        localStorage.setItem('tiemlua_user', JSON.stringify(matchedUser));
+        return { success: true, isAdmin: matchedUser.role === 'admin' };
+      }
+    } catch (err) {
+      console.warn('Fallback login error:', err);
+    }
+
+    // 🔒 3. REGULAR USER SIGN IN VIA SUPABASE AUTH
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: emailOrUsername,
