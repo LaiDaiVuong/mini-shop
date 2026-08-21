@@ -33,6 +33,7 @@ export default function AdminDashboardPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [hasMounted, setHasMounted] = useState(false);
 
   // Filters & Search State
   const [searchProd, setSearchProd] = useState('');
@@ -97,6 +98,7 @@ export default function AdminDashboardPage() {
   };
 
   useEffect(() => {
+    setHasMounted(true);
     loadSupabaseData();
   }, []);
 
@@ -239,6 +241,17 @@ export default function AdminDashboardPage() {
   };
 
   const filteredOrders = orderFilterStatus === 'all' ? orders : orders.filter(o => o.status === orderFilterStatus);
+
+  if (!hasMounted) {
+    return (
+      <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', background: '#0F172A', color: '#fff' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '2rem', marginBottom: 10 }}>🔥</div>
+          <div style={{ fontSize: '0.9rem', color: '#C89B3C', fontWeight: 800 }}>ĐANG TẢI HỆ THỐNG QUẢN TRỊ TIỆM LỬA...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc', color: '#0f172a' }}>

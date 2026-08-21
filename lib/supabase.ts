@@ -361,7 +361,12 @@ export async function fetchUsersFromSupabase(): Promise<User[]> {
   // Merge with local persistent users
   try {
     if (typeof window !== 'undefined') {
-      const local = localStorage.getItem('tiemlua_users_list');
+      let local = localStorage.getItem('tiemlua_users_list');
+      if (!local) {
+        localStorage.setItem('tiemlua_users_list', JSON.stringify(INITIAL_USERS_DATA));
+        local = JSON.stringify(INITIAL_USERS_DATA);
+      }
+
       if (local) {
         const localList: User[] = JSON.parse(local);
         const userMap = new Map<string, User>();
@@ -499,7 +504,11 @@ export async function deleteUserFromSupabase(id: string) {
 
   try {
     if (typeof window !== 'undefined') {
-      const local = localStorage.getItem('tiemlua_users_list');
+      let local = localStorage.getItem('tiemlua_users_list');
+      if (!local) {
+        localStorage.setItem('tiemlua_users_list', JSON.stringify(INITIAL_USERS_DATA));
+        local = JSON.stringify(INITIAL_USERS_DATA);
+      }
       if (local) {
         let list: User[] = JSON.parse(local);
         list = list.filter(u => u.id !== id);
