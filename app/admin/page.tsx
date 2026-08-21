@@ -25,7 +25,7 @@ export default function AdminDashboardPage() {
   const router = useRouter();
   const { user, logout } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'users' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'users'>('overview');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   // Data States
@@ -331,7 +331,6 @@ export default function AdminDashboardPage() {
             { id: 'products', icon: '📦', label: 'Quản Lý Sản Phẩm', badge: products.length },
             { id: 'orders', icon: '🛒', label: 'Quản Lý Đơn Hàng', badge: pendingCount ? `${pendingCount} Mới` : undefined, badgeColor: '#EF4444' },
             { id: 'users', icon: '👥', label: 'Quản Lý User', badge: users.length },
-            { id: 'settings', icon: '⚙️', label: 'Cấu Hình Hệ Thống' },
           ].map(item => {
             const isActive = activeTab === item.id;
             return (
@@ -457,7 +456,6 @@ export default function AdminDashboardPage() {
               {activeTab === 'products' && '📦 Quản Lý Kho & Sản Phẩm'}
               {activeTab === 'orders' && '🛒 Quản Lý Đơn Đặt Hàng'}
               {activeTab === 'users' && '👥 Quản Lý Danh Sách User'}
-              {activeTab === 'settings' && '⚙️ Cấu Hình Máy Chủ & Kết Nối'}
             </h1>
             <div style={{ fontSize: '0.775rem', color: '#64748b', marginTop: 2 }}>Trạm điều hành thương mại điện tử Tiệm Lửa</div>
           </div>
@@ -1326,29 +1324,6 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
-          {/* TAB 5: SETTINGS */}
-          {activeTab === 'settings' && (
-            <div style={{ background: '#fff', padding: 24, borderRadius: 16, border: '1px solid #e2e8f0', maxWidth: 650 }}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A', marginBottom: 6 }}>⚙️ Cấu Hình Máy Chủ & Kết Nối</h2>
-              <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: 20 }}>Thông tin kết nối đám mây của cửa hàng</p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>ENDPOINT SERVER URL</label>
-                  <input type="text" readOnly value="https://lnwltbvlifrhyrpwtmmf.supabase.co" style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: 600, color: '#334155', fontSize: '0.875rem' }} />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>API PUBLISHABLE KEY</label>
-                  <input type="text" readOnly value="sb_publishable_nkefygNGjpLMtEsPv127jQ_yJakszuM" style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: 600, color: '#334155', fontSize: '0.875rem' }} />
-                </div>
-
-                <div style={{ padding: 16, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, color: '#166534', fontSize: '0.85rem' }}>
-                  ✓ Đã bảo mật khóa trong tệp môi trường <code>.env.local</code> và chặn đẩy lên GitHub theo đúng tiêu chuẩn.
-                </div>
-              </div>
-            </div>
-          )}
 
         </div>
 
