@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     email VARCHAR(255) NOT NULL UNIQUE,
     fullname VARCHAR(255) NOT NULL,
     phone VARCHAR(50),
+    password VARCHAR(255),
     role VARCHAR(50) DEFAULT 'user',
     status VARCHAR(50) DEFAULT 'active',
     spent NUMERIC(12, 2) DEFAULT 0,

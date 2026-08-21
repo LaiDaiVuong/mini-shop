@@ -65,4 +65,5 @@ export interface User {
   status?: 'active' | 'locked';
   spent?: number;
   spentFormatted?: string;
+  password?: string;
 }

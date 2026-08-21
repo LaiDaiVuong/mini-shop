@@ -23,6 +23,7 @@ export const UserModal: React.FC<UserModalProps> = ({
   const [role, setRole] = useState<'admin' | 'user'>('user');
   const [status, setStatus] = useState<'active' | 'locked'>('active');
   const [spentNum, setSpentNum] = useState<number>(0);
+  const [password, setPassword] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -32,6 +33,7 @@ export const UserModal: React.FC<UserModalProps> = ({
       setRole(user.role || 'user');
       setStatus(user.status || 'active');
       setSpentNum(user.spent || 0);
+      setPassword(user.password || '');
     } else {
       setFullname('');
       setEmail('');
@@ -39,6 +41,7 @@ export const UserModal: React.FC<UserModalProps> = ({
       setRole('user');
       setStatus('active');
       setSpentNum(0);
+      setPassword('');
     }
   }, [user, isOpen]);
 
@@ -48,6 +51,11 @@ export const UserModal: React.FC<UserModalProps> = ({
     e.preventDefault();
     if (!fullname.trim() || !email.trim()) {
       alert('Vui lòng điền Họ tên và Email hợp lệ!');
+      return;
+    }
+
+    if (!user && (!password || password.length < 6)) {
+      alert('Vui lòng nhập mật khẩu tối thiểu 6 ký tự cho user mới!');
       return;
     }
 
@@ -61,7 +69,8 @@ export const UserModal: React.FC<UserModalProps> = ({
       avatar: (fullname.trim() || email.trim()).charAt(0).toUpperCase(),
       createdAt: user?.createdAt || new Date().toISOString().replace('T', ' ').substring(0, 16),
       spent: spentNum,
-      spentFormatted: formatCurrencyVND(spentNum)
+      spentFormatted: formatCurrencyVND(spentNum),
+      password: password || undefined
     };
 
     onSave(savedUser);
@@ -249,6 +258,22 @@ export const UserModal: React.FC<UserModalProps> = ({
                   placeholder="Ví dụ: 0988 299 999" 
                   value={phone} 
                   onChange={(e) => setPhone(e.target.value)}
+                  style={{ width: '100%', boxSizing: 'border-box', height: 42, padding: '0 14px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: '0.875rem', color: '#0F172A' }}
+                />
+              </div>
+
+              {/* Field: Password (Required for new, optional for edit) */}
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: 6 }}>
+                  {user ? 'Mật khẩu mới (để trống nếu giữ nguyên)' : 'Mật khẩu *'}
+                </label>
+                <input 
+                  type="password" 
+                  placeholder={user ? 'Nhập mật khẩu mới...' : 'Nhập mật khẩu (tối thiểu 6 ký tự)...'}
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)}
+                  required={!user}
+                  minLength={6}
                   style={{ width: '100%', boxSizing: 'border-box', height: 42, padding: '0 14px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: '0.875rem', color: '#0F172A' }}
                 />
               </div>

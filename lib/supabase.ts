@@ -335,7 +335,8 @@ export async function fetchUsersFromSupabase(): Promise<User[]> {
         createdAt: row.created_at ? new Date(row.created_at).toISOString().replace('T', ' ').substring(0, 16) : '',
         status: row.status || 'active',
         spent: Number(row.spent) || 0,
-        spentFormatted: formatCurrencyVND(Number(row.spent) || 0)
+        spentFormatted: formatCurrencyVND(Number(row.spent) || 0),
+        password: row.password || ''
       }));
     } else {
       dbUsers = INITIAL_USERS_DATA;
@@ -382,7 +383,8 @@ export async function saveUserToSupabase(user: User, isEditing: boolean) {
     createdAt: user.createdAt || new Date().toISOString().replace('T', ' ').substring(0, 16),
     status: user.status || 'active',
     spent: user.spent || 0,
-    spentFormatted: formatCurrencyVND(user.spent || 0)
+    spentFormatted: formatCurrencyVND(user.spent || 0),
+    password: user.password || ''
   };
 
   try {
@@ -391,6 +393,7 @@ export async function saveUserToSupabase(user: User, isEditing: boolean) {
       email: cleanUser.email,
       fullname: cleanUser.fullname,
       phone: cleanUser.phone,
+      password: cleanUser.password,
       role: cleanUser.role,
       status: cleanUser.status,
       spent: cleanUser.spent
