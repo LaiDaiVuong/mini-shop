@@ -380,8 +380,17 @@ export async function fetchUsersFromSupabase(): Promise<User[]> {
         const deletedIdsStr = localStorage.getItem('tiemlua_deleted_users');
         if (deletedIdsStr) {
           const deletedIds: string[] = JSON.parse(deletedIdsStr);
+          const emailsToDelete: string[] = [];
+          userMap.forEach((u) => {
+            if (u.id && deletedIds.includes(u.id)) {
+              emailsToDelete.push(u.email.toLowerCase());
+            }
+          });
           deletedIds.forEach(id => {
             userMap.delete(id);
+          });
+          emailsToDelete.forEach(email => {
+            userMap.delete(email);
           });
         }
 

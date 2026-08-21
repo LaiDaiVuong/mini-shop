@@ -86,7 +86,7 @@ export default function AdminDashboardPage() {
         }
       }
 
-      if (usersData && usersData.length > 0) {
+      if (usersData) {
         setUsers(usersData);
       }
     } catch (err) {
