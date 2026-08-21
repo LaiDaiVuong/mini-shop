@@ -345,6 +345,19 @@ export async function fetchUsersFromSupabase(): Promise<User[]> {
     dbUsers = INITIAL_USERS_DATA;
   }
 
+  // Filter out deleted users
+  try {
+    if (typeof window !== 'undefined') {
+      const deletedIdsStr = localStorage.getItem('tiemlua_deleted_users');
+      if (deletedIdsStr) {
+        const deletedIds: string[] = JSON.parse(deletedIdsStr);
+        dbUsers = dbUsers.filter(u => !u.id || !deletedIds.includes(u.id));
+      }
+    }
+  } catch (e) {
+    console.warn('Error filtering deleted users:', e);
+  }
+
   // Merge with local persistent users
   try {
     if (typeof window !== 'undefined') {
@@ -362,6 +375,16 @@ export async function fetchUsersFromSupabase(): Promise<User[]> {
           if (u.id) userMap.set(u.id, u);
           userMap.set(u.email.toLowerCase(), u);
         });
+
+        // Ensure deleted users are completely removed
+        const deletedIdsStr = localStorage.getItem('tiemlua_deleted_users');
+        if (deletedIdsStr) {
+          const deletedIds: string[] = JSON.parse(deletedIdsStr);
+          deletedIds.forEach(id => {
+            userMap.delete(id);
+          });
+        }
+
         return Array.from(new Set(userMap.values()));
       }
     }
@@ -408,6 +431,22 @@ export async function saveUserToSupabase(user: User, isEditing: boolean) {
     console.warn('saveUserToSupabase info:', err);
   }
 
+  // Remove from deleted list if re-saved
+  try {
+    if (typeof window !== 'undefined') {
+      const deletedIdsStr = localStorage.getItem('tiemlua_deleted_users');
+      if (deletedIdsStr) {
+        let deletedIds: string[] = JSON.parse(deletedIdsStr);
+        if (cleanUser.id && deletedIds.includes(cleanUser.id)) {
+          deletedIds = deletedIds.filter(id => id !== cleanUser.id);
+          localStorage.setItem('tiemlua_deleted_users', JSON.stringify(deletedIds));
+        }
+      }
+    }
+  } catch (e) {
+    console.warn(e);
+  }
+
   // Always update local persistent storage
   try {
     if (typeof window !== 'undefined') {
@@ -435,11 +474,28 @@ export async function deleteUserFromSupabase(id: string) {
     console.warn('deleteUserFromSupabase info:', err);
   }
 
+  // Add to local deleted tracking list
   try {
     if (typeof window !== 'undefined') {
-      const allUsers = await fetchUsersFromSupabase();
-      const updatedList = allUsers.filter(u => u.id !== id);
-      localStorage.setItem('tiemlua_users_list', JSON.stringify(updatedList));
+      const deletedIdsStr = localStorage.getItem('tiemlua_deleted_users');
+      const deletedIds: string[] = deletedIdsStr ? JSON.parse(deletedIdsStr) : [];
+      if (!deletedIds.includes(id)) {
+        deletedIds.push(id);
+        localStorage.setItem('tiemlua_deleted_users', JSON.stringify(deletedIds));
+      }
+    }
+  } catch (e) {
+    console.warn('Error tracking deleted user ID:', e);
+  }
+
+  try {
+    if (typeof window !== 'undefined') {
+      const local = localStorage.getItem('tiemlua_users_list');
+      if (local) {
+        let list: User[] = JSON.parse(local);
+        list = list.filter(u => u.id !== id);
+        localStorage.setItem('tiemlua_users_list', JSON.stringify(list));
+      }
     }
   } catch (e) {
     console.warn('Error deleting local user:', e);
