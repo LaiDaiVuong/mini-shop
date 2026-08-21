@@ -58,6 +58,11 @@ export interface User {
   id?: string;
   email: string;
   fullname: string;
+  phone?: string;
   role: 'admin' | 'user';
   avatar?: string;
+  createdAt?: string;
+  status?: 'active' | 'locked';
+  spent?: number;
+  spentFormatted?: string;
 }

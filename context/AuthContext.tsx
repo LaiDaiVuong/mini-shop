@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '@/lib/types';
-import { supabase } from '@/lib/supabase';
+import { supabase, saveUserToSupabase } from '@/lib/supabase';
 
 interface AuthContextType {
   user: User | null;
@@ -133,30 +133,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, pass: string, fullname: string) => {
     // 🔒 SECURITY RULE: Public sign-ups are STRICTLY 'user' role ONLY!
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanName = fullname.trim() || cleanEmail.split('@')[0] || 'Khách Hàng VIP';
+
     try {
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: cleanEmail,
         password: pass,
         options: {
           data: {
-            fullname,
+            fullname: cleanName,
             role: 'user', // STRICTLY USER ROLE ONLY
           },
         },
       });
 
+      const registeredUser: User = {
+        id: data?.user?.id || 'usr-' + Date.now(),
+        email: cleanEmail,
+        fullname: cleanName,
+        phone: '',
+        role: 'user',
+        avatar: cleanName.charAt(0).toUpperCase(),
+        createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+        status: 'active',
+        spent: 0,
+        spentFormatted: '0đ'
+      };
+
+      // Automatically register user into system admin directory
+      await saveUserToSupabase(registeredUser, false);
+
       if (error) {
         const isRateLimit = error.message.toLowerCase().includes('rate limit') || error.message.toLowerCase().includes('invalid');
         if (isRateLimit) {
-          const fallbackUser: User = {
-            id: 'user-' + Date.now(),
-            email,
-            fullname: fullname || 'Khách Hàng VIP',
-            role: 'user', // STRICTLY USER ROLE ONLY
-            avatar: (fullname || email).charAt(0).toUpperCase()
-          };
-          setUser(fallbackUser);
-          localStorage.setItem('tiemlua_user', JSON.stringify(fallbackUser));
+          setUser(registeredUser);
+          localStorage.setItem('tiemlua_user', JSON.stringify(registeredUser));
           return { success: true };
         }
         return { success: false, error: translateSupabaseError(error.message) };
@@ -167,6 +179,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         mapped.role = 'user'; // STRICTLY USER ROLE ONLY
         setUser(mapped);
         localStorage.setItem('tiemlua_user', JSON.stringify(mapped));
+      } else {
+        setUser(registeredUser);
+        localStorage.setItem('tiemlua_user', JSON.stringify(registeredUser));
       }
 
       return { success: true };

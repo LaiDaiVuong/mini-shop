@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
-import { Product, Order } from './types';
-import { INITIAL_PRODUCTS_DATA } from './products-data';
+import { Product, Order, User } from './types';
+import { INITIAL_PRODUCTS_DATA, formatCurrencyVND } from './products-data';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://lnwltbvlifrhyrpwtmmf.supabase.co';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_nkefygNGjpLMtEsPv127jQ_yJakszuM';
@@ -267,4 +267,180 @@ export async function updateOrderStatusInSupabase(orderId: string, status: strin
     console.warn('Error updateOrderStatusInSupabase:', err);
     return { success: false, error: err };
   }
+}
+
+export const INITIAL_USERS_DATA: User[] = [
+  {
+    id: 'master-admin-id',
+    email: 'admin@tiemlua.com',
+    fullname: 'Lại Đại Vương',
+    phone: '0888 368 726',
+    role: 'admin',
+    avatar: '👑',
+    createdAt: '2026-01-15 08:30',
+    status: 'active',
+    spent: 125000000,
+    spentFormatted: '125,000,000đ'
+  },
+  {
+    id: 'usr-001',
+    email: 'hung.nguyen@vip.com',
+    fullname: 'Nguyễn Văn Hùng',
+    phone: '0988 299 999',
+    role: 'user',
+    avatar: 'H',
+    createdAt: '2026-02-10 14:20',
+    status: 'active',
+    spent: 29700000,
+    spentFormatted: '29,700,000đ'
+  },
+  {
+    id: 'usr-002',
+    email: 'minhanh.tran@luxury.vn',
+    fullname: 'Trần Thị Minh Anh',
+    phone: '0912 345 678',
+    role: 'user',
+    avatar: 'M',
+    createdAt: '2026-03-01 09:15',
+    status: 'active',
+    spent: 18500000,
+    spentFormatted: '18,500,000đ'
+  },
+  {
+    id: 'usr-003',
+    email: 'nam.le@gmail.com',
+    fullname: 'Lê Hoàng Nam',
+    phone: '0977 123 999',
+    role: 'user',
+    avatar: 'N',
+    createdAt: '2026-03-14 16:45',
+    status: 'active',
+    spent: 5600000,
+    spentFormatted: '5,600,000đ'
+  }
+];
+
+export async function fetchUsersFromSupabase(): Promise<User[]> {
+  let dbUsers: User[] = [];
+  try {
+    const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+    if (!error && data && data.length > 0) {
+      dbUsers = data.map((row: any) => ({
+        id: String(row.id),
+        email: row.email || '',
+        fullname: row.fullname || row.name || 'Người dùng',
+        phone: row.phone || '',
+        role: row.role === 'admin' ? 'admin' : 'user',
+        avatar: (row.fullname || row.email || 'U').charAt(0).toUpperCase(),
+        createdAt: row.created_at ? new Date(row.created_at).toISOString().replace('T', ' ').substring(0, 16) : '',
+        status: row.status || 'active',
+        spent: Number(row.spent) || 0,
+        spentFormatted: formatCurrencyVND(Number(row.spent) || 0)
+      }));
+    } else {
+      dbUsers = INITIAL_USERS_DATA;
+    }
+  } catch {
+    dbUsers = INITIAL_USERS_DATA;
+  }
+
+  // Merge with local persistent users
+  try {
+    if (typeof window !== 'undefined') {
+      const local = localStorage.getItem('tiemlua_users_list');
+      if (local) {
+        const localList: User[] = JSON.parse(local);
+        const userMap = new Map<string, User>();
+        // Add defaults / db first
+        dbUsers.forEach(u => {
+          if (u.id) userMap.set(u.id, u);
+          userMap.set(u.email.toLowerCase(), u);
+        });
+        // Override with local modified / added users
+        localList.forEach(u => {
+          if (u.id) userMap.set(u.id, u);
+          userMap.set(u.email.toLowerCase(), u);
+        });
+        return Array.from(new Set(userMap.values()));
+      }
+    }
+  } catch (e) {
+    console.warn('Error reading local users list:', e);
+  }
+
+  return dbUsers;
+}
+
+export async function saveUserToSupabase(user: User, isEditing: boolean) {
+  const cleanUser: User = {
+    id: user.id || 'usr-' + Date.now(),
+    email: user.email.trim().toLowerCase(),
+    fullname: user.fullname.trim(),
+    phone: user.phone?.trim() || '',
+    role: user.role || 'user',
+    avatar: user.avatar || (user.fullname || user.email).charAt(0).toUpperCase(),
+    createdAt: user.createdAt || new Date().toISOString().replace('T', ' ').substring(0, 16),
+    status: user.status || 'active',
+    spent: user.spent || 0,
+    spentFormatted: formatCurrencyVND(user.spent || 0)
+  };
+
+  try {
+    const row = {
+      id: cleanUser.id,
+      email: cleanUser.email,
+      fullname: cleanUser.fullname,
+      phone: cleanUser.phone,
+      role: cleanUser.role,
+      status: cleanUser.status,
+      spent: cleanUser.spent
+    };
+
+    if (isEditing) {
+      await supabase.from('profiles').update(row).eq('id', cleanUser.id);
+    } else {
+      await supabase.from('profiles').insert([row]);
+    }
+  } catch (err) {
+    console.warn('saveUserToSupabase info:', err);
+  }
+
+  // Always update local persistent storage
+  try {
+    if (typeof window !== 'undefined') {
+      const allUsers = await fetchUsersFromSupabase();
+      let updatedList: User[];
+      if (isEditing) {
+        updatedList = allUsers.map(u => (u.id === cleanUser.id || u.email.toLowerCase() === cleanUser.email.toLowerCase()) ? cleanUser : u);
+      } else {
+        const filtered = allUsers.filter(u => u.id !== cleanUser.id && u.email.toLowerCase() !== cleanUser.email.toLowerCase());
+        updatedList = [cleanUser, ...filtered];
+      }
+      localStorage.setItem('tiemlua_users_list', JSON.stringify(updatedList));
+    }
+  } catch (e) {
+    console.warn('Error saving local user:', e);
+  }
+
+  return { success: true, user: cleanUser };
+}
+
+export async function deleteUserFromSupabase(id: string) {
+  try {
+    await supabase.from('profiles').delete().eq('id', id);
+  } catch (err) {
+    console.warn('deleteUserFromSupabase info:', err);
+  }
+
+  try {
+    if (typeof window !== 'undefined') {
+      const allUsers = await fetchUsersFromSupabase();
+      const updatedList = allUsers.filter(u => u.id !== id);
+      localStorage.setItem('tiemlua_users_list', JSON.stringify(updatedList));
+    }
+  } catch (e) {
+    console.warn('Error deleting local user:', e);
+  }
+
+  return { success: true };
 }

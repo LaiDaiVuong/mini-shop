@@ -3,18 +3,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Product, Order } from '@/lib/types';
+import { Product, Order, User } from '@/lib/types';
 import { INITIAL_PRODUCTS_DATA, formatCurrencyVND } from '@/lib/products-data';
 import { 
   fetchProductsFromSupabase, 
   saveProductToSupabase, 
   deleteProductFromSupabase, 
   fetchOrdersFromSupabase, 
-  updateOrderStatusInSupabase 
+  updateOrderStatusInSupabase,
+  fetchUsersFromSupabase,
+  saveUserToSupabase,
+  deleteUserFromSupabase
 } from '@/lib/supabase';
 import { RevenueGrowthChart } from '@/components/admin/RevenueGrowthChart';
 import { OrderStatusDonutChart } from '@/components/admin/OrderStatusDonutChart';
 import { ProductModal } from '@/components/admin/ProductModal';
+import { UserModal } from '@/components/admin/UserModal';
 import { useAuth } from '@/context/AuthContext';
 
 export default function AdminDashboardPage() {
@@ -27,6 +31,7 @@ export default function AdminDashboardPage() {
   // Data States
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS_DATA);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   // Filters & Search State
@@ -34,6 +39,11 @@ export default function AdminDashboardPage() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [stockFilter, setStockFilter] = useState('all');
   const [orderFilterStatus, setOrderFilterStatus] = useState<string>('all');
+
+  // User Filter & Search State
+  const [searchUser, setSearchUser] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState('all');
+  const [userStatusFilter, setUserStatusFilter] = useState('all');
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -49,13 +59,18 @@ export default function AdminDashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
+  // User Modal State
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+
   // Load live data from DB on mount
   const loadSupabaseData = async () => {
     setIsLoadingData(true);
     try {
-      const [prodsData, ordersData] = await Promise.all([
+      const [prodsData, ordersData, usersData] = await Promise.all([
         fetchProductsFromSupabase(),
-        fetchOrdersFromSupabase()
+        fetchOrdersFromSupabase(),
+        fetchUsersFromSupabase()
       ]);
 
       if (prodsData && prodsData.length > 0) {
@@ -69,6 +84,10 @@ export default function AdminDashboardPage() {
         if (localOrders) {
           setOrders(JSON.parse(localOrders));
         }
+      }
+
+      if (usersData && usersData.length > 0) {
+        setUsers(usersData);
       }
     } catch (err) {
       console.error('Error loading admin data:', err);
@@ -122,6 +141,36 @@ export default function AdminDashboardPage() {
       setSelectedProdIds([]);
       await loadSupabaseData();
     }
+  };
+
+  // User Management Handlers
+  const handleSaveUser = async (u: User) => {
+    const isEditing = !!editingUser;
+    await saveUserToSupabase(u, isEditing);
+    await loadSupabaseData();
+    setIsUserModalOpen(false);
+    setEditingUser(null);
+  };
+
+  const handleDeleteUser = async (id: string, email: string) => {
+    if (email === 'admin@tiemlua.com') {
+      alert('🔒 Không thể xóa tài khoản Master Admin!');
+      return;
+    }
+    if (confirm('⚠️ CẢNH BÁO: Bạn có chắc chắn muốn xóa User này khỏi hệ thống?')) {
+      await deleteUserFromSupabase(id);
+      await loadSupabaseData();
+    }
+  };
+
+  const handleToggleUserLock = async (u: User) => {
+    if (u.email === 'admin@tiemlua.com') {
+      alert('🔒 Không thể khóa tài khoản Master Admin!');
+      return;
+    }
+    const newStatus = u.status === 'locked' ? 'active' : 'locked';
+    await saveUserToSupabase({ ...u, status: newStatus }, true);
+    await loadSupabaseData();
   };
 
   // Update order status directly in DB
@@ -268,7 +317,7 @@ export default function AdminDashboardPage() {
             { id: 'overview', icon: '📊', label: 'Tổng Quan Hệ Thống' },
             { id: 'products', icon: '📦', label: 'Quản Lý Sản Phẩm', badge: products.length },
             { id: 'orders', icon: '🛒', label: 'Quản Lý Đơn Hàng', badge: pendingCount ? `${pendingCount} Mới` : undefined, badgeColor: '#EF4444' },
-            { id: 'users', icon: '👥', label: 'Quản Lý Khách Hàng' },
+            { id: 'users', icon: '👥', label: 'Quản Lý User', badge: users.length },
             { id: 'settings', icon: '⚙️', label: 'Cấu Hình Hệ Thống' },
           ].map(item => {
             const isActive = activeTab === item.id;
@@ -300,7 +349,7 @@ export default function AdminDashboardPage() {
                 {!isSidebarCollapsed && (
                   <>
                     <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.label}</span>
-                    {item.badge && (
+                    {item.badge !== undefined && (
                       <span style={{ 
                         padding: '2px 8px', 
                         borderRadius: 12, 
@@ -394,7 +443,7 @@ export default function AdminDashboardPage() {
               {activeTab === 'overview' && '📊 Bảng Điều Khiển Tổng Quan'}
               {activeTab === 'products' && '📦 Quản Lý Kho & Sản Phẩm'}
               {activeTab === 'orders' && '🛒 Quản Lý Đơn Đặt Hàng'}
-              {activeTab === 'users' && '👥 Danh Sách Khách Hàng VIP'}
+              {activeTab === 'users' && '👥 Quản Lý Danh Sách User'}
               {activeTab === 'settings' && '⚙️ Cấu Hình Máy Chủ & Kết Nối'}
             </h1>
             <div style={{ fontSize: '0.775rem', color: '#64748b', marginTop: 2 }}>Trạm điều hành thương mại điện tử Tiệm Lửa</div>
@@ -425,6 +474,28 @@ export default function AdminDashboardPage() {
                 }}
               >
                 <span>+</span> THÊM SẢN PHẨM MỚI
+              </button>
+            )}
+
+            {activeTab === 'users' && (
+              <button 
+                onClick={() => { setEditingUser(null); setIsUserModalOpen(true); }}
+                style={{ 
+                  padding: '9px 18px', 
+                  background: 'linear-gradient(135deg, #C89B3C 0%, #a67c2e 100%)', 
+                  color: '#ffffff', 
+                  borderRadius: 8, 
+                  fontWeight: 800, 
+                  fontSize: '0.825rem', 
+                  border: 'none', 
+                  cursor: 'pointer', 
+                  boxShadow: '0 4px 14px rgba(200, 155, 60, 0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+              >
+                <span>+</span> THÊM USER MỚI
               </button>
             )}
           </div>
@@ -975,31 +1046,269 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
-          {/* TAB 4: USERS */}
+          {/* TAB 4: USERS (COMPLETE USER MANAGEMENT SYSTEM) */}
           {activeTab === 'users' && (
-            <div style={{ background: '#fff', padding: 24, borderRadius: 16, border: '1px solid #e2e8f0' }}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A', marginBottom: 16 }}>Danh Sách Khách Hàng VIP</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
-                {[
-                  { name: 'Lại Đại Vương', phone: '0888 368 726', role: 'Quản Trị Viên VIP', spent: '125,000,000đ' },
-                  { name: 'Nguyễn Văn Hùng', phone: '0988 299 999', role: 'Khách Hàng VIP', spent: '29,700,000đ' },
-                  { name: 'Trần Thị Minh Anh', phone: '0912 345 678', role: 'Thành Viên VIP', spent: '18,500,000đ' },
-                  { name: 'Lê Hoàng Nam', phone: '0977 123 999', role: 'Thành Viên VIP', spent: '5,600,000đ' }
-                ].map((u, i) => (
-                  <div key={i} style={{ background: '#f8fafc', padding: 18, borderRadius: 12, border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#C89B3C', color: '#fff', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {u.name.charAt(0)}
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 800, color: '#0F172A' }}>{u.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#C89B3C' }}>{u.role}</div>
-                      </div>
-                    </div>
-                    <div style={{ fontSize: '0.825rem', color: '#475569' }}>📞 {u.phone}</div>
-                    <div style={{ fontSize: '0.825rem', color: '#475569', marginTop: 4 }}>💰 Chi tiêu: <strong>{u.spent}</strong></div>
+            <div>
+              {/* TOP KPI CARDS FOR USERS */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 20 }}>
+                <div style={{ background: '#fff', padding: '16px 20px', borderRadius: 14, border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>TỔNG SỐ USER</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A', marginTop: 4 }}>{users.length} Tài khoản</div>
+                </div>
+
+                <div style={{ background: '#fff', padding: '16px 20px', borderRadius: 14, border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#10B981', fontWeight: 700 }}>● ĐANG HOẠT ĐỘNG</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#10B981', marginTop: 4 }}>
+                    {users.filter(u => u.status !== 'locked').length}
                   </div>
-                ))}
+                </div>
+
+                <div style={{ background: '#fff', padding: '16px 20px', borderRadius: 14, border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#C89B3C', fontWeight: 700 }}>👑 QUẢN TRỊ VIÊN</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#C89B3C', marginTop: 4 }}>
+                    {users.filter(u => u.role === 'admin').length}
+                  </div>
+                </div>
+
+                <div style={{ background: '#fff', padding: '16px 20px', borderRadius: 14, border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 700 }}>👤 KHÁCH HÀNG VIP</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#3b82f6', marginTop: 4 }}>
+                    {users.filter(u => u.role === 'user').length}
+                  </div>
+                </div>
+              </div>
+
+              {/* MAIN USERS TABLE CONTAINER */}
+              <div style={{ background: '#ffffff', borderRadius: 16, border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', padding: 24 }}>
+                
+                {/* TOOLBAR: SEARCH & MULTI-FILTERS */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', flex: 1 }}>
+                    
+                    {/* Search Input */}
+                    <div style={{ position: 'relative', width: 280 }}>
+                      <input 
+                        type="text" 
+                        placeholder="Tìm theo tên, email, SĐT..." 
+                        value={searchUser}
+                        onChange={(e) => setSearchUser(e.target.value)}
+                        style={{ width: '100%', padding: '9px 14px 9px 36px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: '0.85rem' }}
+                      />
+                      <span style={{ position: 'absolute', left: 12, top: 9, color: '#94a3b8' }}>🔍</span>
+                    </div>
+
+                    {/* Role Filter */}
+                    <select
+                      value={userRoleFilter}
+                      onChange={(e) => setUserRoleFilter(e.target.value)}
+                      style={{ padding: '9px 14px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: '0.85rem', fontWeight: 600, color: '#0F172A', cursor: 'pointer' }}
+                    >
+                      <option value="all">👥 Tất cả phân quyền</option>
+                      <option value="admin">👑 Quản trị viên (Admin)</option>
+                      <option value="user">👤 Khách hàng (User)</option>
+                    </select>
+
+                    {/* Status Filter */}
+                    <select
+                      value={userStatusFilter}
+                      onChange={(e) => setUserStatusFilter(e.target.value)}
+                      style={{ padding: '9px 14px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: '0.85rem', fontWeight: 600, color: '#0F172A', cursor: 'pointer' }}
+                    >
+                      <option value="all">⚡ Tất cả trạng thái</option>
+                      <option value="active">● Hoạt động</option>
+                      <option value="locked">🔒 Đang khóa</option>
+                    </select>
+                  </div>
+
+                  {/* Add User Button */}
+                  <button 
+                    onClick={() => { setEditingUser(null); setIsUserModalOpen(true); }}
+                    style={{ padding: '9px 16px', background: 'linear-gradient(135deg, #C89B3C 0%, #a67c2e 100%)', color: '#fff', borderRadius: 8, fontWeight: 800, fontSize: '0.825rem', border: 'none', cursor: 'pointer' }}
+                  >
+                    + THÊM USER MỚI
+                  </button>
+                </div>
+
+                {/* TABLE OF USERS */}
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', textAlign: 'left' }}>
+                        <th style={{ padding: 14 }}>Người Dùng</th>
+                        <th style={{ padding: 14 }}>Email / Tài Khoản</th>
+                        <th style={{ padding: 14 }}>Số Điện Thoại</th>
+                        <th style={{ padding: 14 }}>Phân Quyền</th>
+                        <th style={{ padding: 14 }}>Ngày Tham Gia</th>
+                        <th style={{ padding: 14 }}>Chi Tiêu</th>
+                        <th style={{ padding: 14 }}>Trạng Thái</th>
+                        <th style={{ padding: 14, textAlign: 'center', width: 140 }}>Hành Động</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users
+                        .filter(u => {
+                          const q = searchUser.toLowerCase();
+                          const matchesSearch = u.fullname.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || (u.phone && u.phone.includes(q)) || (u.id && u.id.toLowerCase().includes(q));
+                          const matchesRole = userRoleFilter === 'all' || u.role === userRoleFilter;
+                          const matchesStatus = userStatusFilter === 'all' || (u.status || 'active') === userStatusFilter;
+                          return matchesSearch && matchesRole && matchesStatus;
+                        })
+                        .map(u => {
+                          const isLocked = u.status === 'locked';
+                          const isAdminRole = u.role === 'admin';
+
+                          return (
+                            <tr key={u.id || u.email} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              {/* Avatar & Fullname */}
+                              <td style={{ padding: 14 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                  <div style={{ 
+                                    width: 38, 
+                                    height: 38, 
+                                    borderRadius: '50%', 
+                                    background: isAdminRole ? 'linear-gradient(135deg, #C89B3C 0%, #a67c2e 100%)' : '#3b82f6', 
+                                    color: '#fff', 
+                                    fontWeight: 800, 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center',
+                                    fontSize: isAdminRole ? '1.1rem' : '0.9rem',
+                                    flexShrink: 0
+                                  }}>
+                                    {isAdminRole ? '👑' : (u.fullname || u.email).charAt(0).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.875rem' }}>{u.fullname}</div>
+                                    <div style={{ fontSize: '0.725rem', color: '#94a3b8', fontFamily: 'monospace' }}>#{u.id || 'N/A'}</div>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Email */}
+                              <td style={{ padding: 14, color: '#475569', fontWeight: 600 }}>
+                                {u.email}
+                              </td>
+
+                              {/* Phone */}
+                              <td style={{ padding: 14, color: '#475569' }}>
+                                {u.phone || <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>Chưa cập nhật</span>}
+                              </td>
+
+                              {/* Role */}
+                              <td style={{ padding: 14 }}>
+                                <span style={{
+                                  padding: '4px 10px',
+                                  borderRadius: 20,
+                                  fontSize: '0.725rem',
+                                  fontWeight: 800,
+                                  background: isAdminRole ? '#fef3c7' : '#eff6ff',
+                                  color: isAdminRole ? '#b45309' : '#2563eb',
+                                  border: '1px solid currentColor',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4
+                                }}>
+                                  {isAdminRole ? '👑 Quản Trị Viên' : '👤 Khách Hàng'}
+                                </span>
+                              </td>
+
+                              {/* Date */}
+                              <td style={{ padding: 14, color: '#64748b', fontSize: '0.8rem' }}>
+                                {u.createdAt || 'Mới'}
+                              </td>
+
+                              {/* Spent */}
+                              <td style={{ padding: 14, fontWeight: 800, color: '#C89B3C' }}>
+                                {u.spentFormatted || formatCurrencyVND(u.spent || 0)}
+                              </td>
+
+                              {/* Status */}
+                              <td style={{ padding: 14 }}>
+                                <span style={{
+                                  padding: '4px 10px',
+                                  borderRadius: 20,
+                                  fontSize: '0.725rem',
+                                  fontWeight: 800,
+                                  background: isLocked ? '#fef2f2' : '#ecfdf5',
+                                  color: isLocked ? '#EF4444' : '#10B981',
+                                  border: '1px solid currentColor',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4
+                                }}>
+                                  ● {isLocked ? 'Đang khóa' : 'Hoạt động'}
+                                </span>
+                              </td>
+
+                              {/* Actions */}
+                              <td style={{ padding: 14, textAlign: 'center' }}>
+                                <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                                  {/* Edit Button */}
+                                  <button
+                                    onClick={() => { setEditingUser(u); setIsUserModalOpen(true); }}
+                                    title="Chỉnh sửa thông tin"
+                                    style={{
+                                      padding: '6px 10px',
+                                      borderRadius: 6,
+                                      border: '1px solid #cbd5e1',
+                                      background: '#f8fafc',
+                                      color: '#0F172A',
+                                      fontSize: '0.75rem',
+                                      fontWeight: 700,
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    ⚡ Sửa
+                                  </button>
+
+                                  {/* Lock / Unlock Button */}
+                                  {u.email !== 'admin@tiemlua.com' && (
+                                    <button
+                                      onClick={() => handleToggleUserLock(u)}
+                                      title={isLocked ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
+                                      style={{
+                                        padding: '6px 8px',
+                                        borderRadius: 6,
+                                        border: isLocked ? '1px solid #10B981' : '1px solid #f59e0b',
+                                        background: isLocked ? '#ecfdf5' : '#fffbeb',
+                                        color: isLocked ? '#10B981' : '#b45309',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 700,
+                                        cursor: 'pointer'
+                                      }}
+                                    >
+                                      {isLocked ? '🔓' : '🔒'}
+                                    </button>
+                                  )}
+
+                                  {/* Delete Button */}
+                                  {u.email !== 'admin@tiemlua.com' && (
+                                    <button
+                                      onClick={() => handleDeleteUser(u.id || '', u.email)}
+                                      title="Xóa User"
+                                      style={{
+                                        padding: '6px 8px',
+                                        borderRadius: 6,
+                                        border: '1px solid #fca5a5',
+                                        background: '#fef2f2',
+                                        color: '#dc2626',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 700,
+                                        cursor: 'pointer'
+                                      }}
+                                    >
+                                      🗑️
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+
               </div>
             </div>
           )}
@@ -1038,6 +1347,14 @@ export default function AdminDashboardPage() {
         onClose={() => { setIsModalOpen(false); setEditingProduct(null); }}
         onSave={handleSaveProduct}
         product={editingProduct}
+      />
+
+      {/* User Modal */}
+      <UserModal
+        isOpen={isUserModalOpen}
+        onClose={() => { setIsUserModalOpen(false); setEditingUser(null); }}
+        onSave={handleSaveUser}
+        user={editingUser}
       />
 
     </div>

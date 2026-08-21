@@ -51,6 +51,18 @@ CREATE TABLE IF NOT EXISTS public.order_items (
     subtotal NUMERIC(12, 2) NOT NULL
 );
 
+-- 5. TẠO BẢNG NGƯỜI DÙNG & KHÁCH HÀNG (profiles / users)
+CREATE TABLE IF NOT EXISTS public.profiles (
+    id VARCHAR(100) PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    fullname VARCHAR(255) NOT NULL,
+    phone VARCHAR(50),
+    role VARCHAR(50) DEFAULT 'user',
+    status VARCHAR(50) DEFAULT 'active',
+    spent NUMERIC(12, 2) DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ============================================================================
 -- BẬT PHÂN QUYỀN BẢO MẬT ROW LEVEL SECURITY (RLS) & POLICY TRUY CẬP
 -- ============================================================================
@@ -58,6 +70,7 @@ ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- Cho phép mọi người xem danh mục & sản phẩm công khai, admin quản lý full
 DROP POLICY IF EXISTS "Public categories read" ON public.categories;
@@ -72,6 +85,10 @@ CREATE POLICY "Public orders full access" ON public.orders FOR ALL USING (true) 
 
 DROP POLICY IF EXISTS "Public insert order_items" ON public.order_items;
 CREATE POLICY "Public insert order_items" ON public.order_items FOR ALL USING (true) WITH CHECK (true);
+
+-- Cho phép quản lý profiles người dùng
+DROP POLICY IF EXISTS "Public profiles full access" ON public.profiles;
+CREATE POLICY "Public profiles full access" ON public.profiles FOR ALL USING (true) WITH CHECK (true);
 
 
 -- ============================================================================
